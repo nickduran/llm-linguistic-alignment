@@ -157,4 +157,5 @@ cython_debug/
 ## local testing files
 sandbox/
 
-
+## files that are too large
+gensim-data/
