@@ -6,4 +6,17 @@ scikit-learn
 scipy==1.12.0 # must use 1.12.0 because 1.13 and above is not compatible with current version of gensim (4.3.2)
 torch
 tqdm
-transformers
+# transformers
+datasets 
+loralib 
+sentencepiece
+bitsandbytes
+
+
+
+
+Robert Trygstad <rtrygsta@asu.edu>
+Nicole Hansel <nhansel@asu.edu>
+Julie Reid <jjreid1@asu.edu>
+
+https://www.when2meet.com/?26868063-HjTvL
