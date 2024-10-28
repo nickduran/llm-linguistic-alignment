@@ -17,9 +17,6 @@ from nltk.corpus import wordnet as wn
 from nltk.tag.stanford import StanfordPOSTagger
 from nltk.util import ngrams
 
-import gensim
-from gensim.models import word2vec
-
 def ngram_pos(sequence1,sequence2,ngramsize=2,
                    ignore_duplicates=True):
     """
@@ -483,7 +480,3 @@ def calculate_alignment(input_files,
     return real_final_turn_df
 
 #### LETS TEST THIS
-
-
-
-
