@@ -80,14 +80,14 @@ class SemanticAlignmentAnalyzer:
                 print(f"Error: Empty embedding for text: '{text}'")
                 return None
                 
-            self.embedding_cache[text] = embedding
+            self.embedding_cache[cache_key] = embedding
             return embedding
             
         except Exception as e:
             print(f"Error encoding text: '{text}': {str(e)}")
             return None
     
-    def pair_and_lag_columns(self, df, columns_to_lag, suffix1='1', suffix2='2'):
+    def pair_and_lag_columns(self, df, columns_to_lag, suffix1='1', suffix2='2', lag=1):
         """
         Creates lagged pairs of specified columns
         
@@ -96,6 +96,7 @@ class SemanticAlignmentAnalyzer:
             columns_to_lag: List of column names to lag
             suffix1: Suffix for original columns
             suffix2: Suffix for lagged columns
+            lag: Number of rows to lag (default: 1)
             
         Returns:
             pd.DataFrame: Processed DataFrame
@@ -103,8 +104,12 @@ class SemanticAlignmentAnalyzer:
         for col in columns_to_lag:
             if col in df.columns:
                 df[f'{col}{suffix1}'] = df[col]
-                df[f'{col}{suffix2}'] = df[col].shift(-1)
-        df['utter_order'] = df['participant'] + ' ' + df['participant'].shift(-1)
+                df[f'{col}{suffix2}'] = df[col].shift(-lag)
+        
+        # Add participant order information
+        if 'participant' in df.columns:
+            df['utter_order'] = df['participant'] + ' ' + df['participant'].shift(-lag)
+        
         return df
     
     def calculate_cosine_similarity(self, df, embedding_pairs):
@@ -123,7 +128,7 @@ class SemanticAlignmentAnalyzer:
                 lambda row: cosine_similarity(
                     np.array(row[col1]).reshape(1, -1),
                     np.array(row[col2]).reshape(1, -1)
-                )[0][0] if row[col1] is not None and row[col2] is not None else None,
+                )[0][0] if pd.notna(row[col1]) and pd.notna(row[col2]) else None,
                 axis=1
             )
             similarity_column_name = f"{col1}_{col2}_cosine_similarity"
@@ -140,51 +145,76 @@ class SemanticAlignmentAnalyzer:
         Returns:
             pd.DataFrame: Processed DataFrame with embeddings and similarities
         """
-        # Read the file
-        df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
-        
-        # Pair and lag columns
-        df = self.pair_and_lag_columns(df, columns_to_lag=['content'])
-        
-        # Compute embeddings
-        for column in ["content1", "content2"]:
-            df[f"{column}_embedding_{self.model_name}"] = df[column].apply(
-                lambda text: self.get_embedding_with_cache(text)
-            )
-        
-        # Calculate cosine similarities
-        embedding_columns = [(f"content1_embedding_{self.model_name}", f"content2_embedding_{self.model_name}")]
-        df = self.calculate_cosine_similarity(df, embedding_columns)
-        
-        return df
+        try:
+            # Read the file
+            df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
+            
+            # Check required columns
+            required_cols = ['participant', 'content']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                raise ValueError(f"Missing required columns: {missing_cols}")
+            
+            # Pair and lag columns
+            df = self.pair_and_lag_columns(df, columns_to_lag=['content'])
+            
+            # Save original filename for reference
+            df['source_file'] = os.path.basename(file_path)
+            
+            # Compute embeddings
+            for column in ["content1", "content2"]:
+                if column in df.columns:
+                    df[f"{column}_embedding_{self.model_name}"] = df[column].apply(
+                        lambda text: self.get_embedding_with_cache(text)
+                    )
+            
+            # Calculate cosine similarities
+            embedding_cols = [(f"content1_embedding_{self.model_name}", f"content2_embedding_{self.model_name}")]
+            df = self.calculate_cosine_similarity(df, embedding_cols)
+            
+            return df
+            
+        except Exception as e:
+            print(f"Error processing file {file_path}: {str(e)}")
+            return pd.DataFrame()  # Return empty dataframe on error
     
-    def analyze_folder(self, folder_path, output_directory=None):
+    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt"):
         """
         Analyze semantic alignment for all text files in a folder
         
         Args:
             folder_path: Path to folder containing text files
             output_directory: Directory to save results (optional)
+            file_pattern: Pattern to match text files (default: "*.txt")
             
         Returns:
             pd.DataFrame: Concatenated results for all files
         """
+        import glob
         result_df = pd.DataFrame()
         
+        # Get list of files matching pattern
+        file_paths = glob.glob(os.path.join(folder_path, file_pattern))
+        
+        if not file_paths:
+            print(f"No files matching pattern '{file_pattern}' found in {folder_path}")
+            return result_df
+        
         # Process each file
-        text_files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
-        for file_name in tqdm(text_files, desc=f"Processing files with {self.model_name}"):
-            file_path = os.path.join(folder_path, file_name)
-            df = self.process_file(file_path)
-            result_df = pd.concat([result_df, df], ignore_index=True)
+        for file_path in tqdm(file_paths, desc=f"Processing files with {self.model_name}"):
+            file_df = self.process_file(file_path)
+            if not file_df.empty:
+                result_df = pd.concat([result_df, file_df], ignore_index=True)
         
         # Save cache
-        self._save_cache()
+        if not result_df.empty:
+            self._save_cache()
         
         # Save results if output directory is provided
-        if output_directory:
+        if output_directory and not result_df.empty:
             os.makedirs(output_directory, exist_ok=True)
             output_path = os.path.join(output_directory, f"semantic_alignment_{self.model_name}.csv")
             result_df.to_csv(output_path, index=False)
+            print(f"Results saved to {output_path}")
         
         return result_df
