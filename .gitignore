@@ -159,3 +159,5 @@ sandbox/
 
 ## files that are too large
 gensim-data/
+
+.config/
