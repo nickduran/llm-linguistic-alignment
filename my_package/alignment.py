@@ -38,52 +38,54 @@ class SemanticAlignmentAnalyzer:
         with open(self.cache_path, "wb") as f:
             pickle.dump(self.embedding_cache, f)
     
-def get_embedding_with_cache(self, text):
-    """
-    Get BERT embedding for text with caching
-    
-    Args:
-        text: Text to encode
+    def get_embedding_with_cache(self, text):
+        """
+        Get BERT embedding for text with caching
         
-    Returns:
-        numpy.ndarray: Embedding vector or None if text cannot be encoded
-    """
-    if text is None:
-        return None
-        
-    if text in self.embedding_cache:
-        return self.embedding_cache[text]
-    
-    # Use our BertWrapper's encode method
-    try:
-        # Remove the problematic parameter
-        tokens = self.tokenizer(
-            text, 
-            return_tensors="pt",
-            truncation=True,
-            max_length=512
-        )
-        
-        if tokens.input_ids.numel() == 0:
-            print(f"Warning: No valid tokens generated for text: '{text}'")
+        Args:
+            text: Text to encode
+            
+        Returns:
+            numpy.ndarray: Embedding vector or None if text cannot be encoded
+        """
+        if text is None or not text.strip():
             return None
             
-        with torch.no_grad():
-            outputs = self.model(**tokens)
+        # Use a more specific cache key
+        cache_key = f"{self.model_name}_{text}"
             
-        last_hidden_states = outputs.last_hidden_state
-        embedding = torch.mean(last_hidden_states, dim=1).numpy()
+        if cache_key in self.embedding_cache:
+            return self.embedding_cache[cache_key]
         
-        if embedding is None or embedding.size == 0:
-            print(f"Error: Empty embedding for text: '{text}'")
+        # Use our BertWrapper's encode method
+        try:
+            tokens = self.tokenizer(
+                text, 
+                return_tensors="pt",
+                truncation=True,
+                max_length=512
+            )
+            
+            if tokens.input_ids.numel() == 0:
+                print(f"Warning: No valid tokens generated for text: '{text}'")
+                return None
+                
+            with torch.no_grad():
+                outputs = self.model(**tokens)
+                
+            last_hidden_states = outputs.last_hidden_state
+            embedding = torch.mean(last_hidden_states, dim=1).numpy()
+            
+            if embedding is None or embedding.size == 0:
+                print(f"Error: Empty embedding for text: '{text}'")
+                return None
+                
+            self.embedding_cache[text] = embedding
+            return embedding
+            
+        except Exception as e:
+            print(f"Error encoding text: '{text}': {str(e)}")
             return None
-            
-        self.embedding_cache[text] = embedding
-        return embedding
-        
-    except Exception as e:
-        print(f"Error encoding text: '{text}': {str(e)}")
-        return None
     
     def pair_and_lag_columns(self, df, columns_to_lag, suffix1='1', suffix2='2'):
         """

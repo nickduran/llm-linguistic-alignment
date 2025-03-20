@@ -1,3 +1,4 @@
+# my_package/model.py
 from transformers import AutoTokenizer, AutoModel
 from .config import get_huggingface_token
 
