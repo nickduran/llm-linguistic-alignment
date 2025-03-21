@@ -1,4 +1,4 @@
-# my_package/alignment_new.py
+# my_package/alignment_bert.py
 import os
 import numpy as np
 import pandas as pd
@@ -264,9 +264,9 @@ class SemanticAlignmentAnalyzer:
             "content2",
             "utter_order",
             f"content1_embedding_{self.model_name}",
-            f"content1_embedding_dims",
+            f"content1_embedding_{self.model_name}_dims",
             f"content2_embedding_{self.model_name}",
-            f"content2_embedding_dims",
+            f"content2_embedding_{self.model_name}_dims",
             new_col_name
         ]
         
