@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the new module
-from my_package.alignment import SemanticAlignmentAnalyzer
+from my_package.alignment_bert import SemanticAlignmentAnalyzer
 
 # Initialize analyzer
 analyzer = SemanticAlignmentAnalyzer()
