@@ -1,7 +1,7 @@
 # tests/test_model.py
 import os
 import pytest
-from my_package.model import BertWrapper
+from my_package.bert_model import BertWrapper
 
 def test_bert_with_env_token():
     """Test that BERT works with environment token"""

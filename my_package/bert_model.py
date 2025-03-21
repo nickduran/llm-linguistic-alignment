@@ -1,4 +1,4 @@
-# my_package/model.py
+# my_package/bert_model.py
 from transformers import AutoTokenizer, AutoModel
 from .config import get_huggingface_token
 
