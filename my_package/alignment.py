@@ -1,4 +1,4 @@
-# my_package/alignment.py
+# my_package/alignment_new.py
 import os
 import numpy as np
 import pandas as pd
@@ -125,12 +125,13 @@ class SemanticAlignmentAnalyzer:
         
         return df
     
-    def process_file(self, file_path):
+    def process_file(self, file_path, lag=1):
         """
         Process a single file to compute embeddings and similarities
         
         Args:
             file_path: Path to the file to process
+            lag: Number of turns to lag when pairing utterances (default: 1)
             
         Returns:
             pd.DataFrame: Processed DataFrame with embeddings and similarities
@@ -147,17 +148,20 @@ class SemanticAlignmentAnalyzer:
             
             # Pair and lag columns - ensure participant exists
             if 'participant' in df.columns:
-                df = self.pair_and_lag_columns(df, columns_to_lag=['content'])
+                df = self.pair_and_lag_columns(df, columns_to_lag=['content'], lag=lag)
             else:
                 print(f"Warning: 'participant' column not found in {file_path}, skipping participant tracking")
                 # Create lagged columns without participant tracking
                 for col in ['content']:
                     if col in df.columns:
                         df[f'{col}1'] = df[col]
-                        df[f'{col}2'] = df[col].shift(-1)
+                        df[f'{col}2'] = df[col].shift(-lag)
             
             # Save original filename for reference
             df['source_file'] = os.path.basename(file_path)
+            
+            # Add lag information to the dataframe
+            df['lag'] = lag
             
             # Compute embeddings
             print(f"Computing embeddings for {file_path}...")
@@ -188,7 +192,7 @@ class SemanticAlignmentAnalyzer:
             traceback.print_exc()  # Print the full stack trace for debugging
             return pd.DataFrame()  # Return empty dataframe on error
     
-    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt"):
+    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1):
         """
         Analyze semantic alignment for all text files in a folder
         
@@ -196,6 +200,7 @@ class SemanticAlignmentAnalyzer:
             folder_path: Path to folder containing text files
             output_directory: Directory to save results (optional)
             file_pattern: Pattern to match text files (default: "*.txt")
+            lag: Number of turns to lag when pairing utterances (default: 1)
             
         Returns:
             pd.DataFrame: Concatenated results for all files
@@ -210,13 +215,14 @@ class SemanticAlignmentAnalyzer:
             print(f"No files matching pattern '{file_pattern}' found in {folder_path}")
             return result_df
         
-        print(f"Found {len(file_paths)} files to process")
+        print(f"Found {len(file_paths)} files to process with lag {lag}")
         
         # Process each file
         successful_files = 0
         for file_path in tqdm(file_paths, desc=f"Processing files with {self.model_name}"):
             try:
-                file_df = self.process_file(file_path)
+                # Pass the lag parameter to process_file
+                file_df = self.process_file(file_path, lag=lag)
                 if not file_df.empty:
                     result_df = pd.concat([result_df, file_df], ignore_index=True)
                     successful_files += 1
@@ -230,7 +236,7 @@ class SemanticAlignmentAnalyzer:
         # Save results if output directory is provided
         if output_directory and not result_df.empty:
             os.makedirs(output_directory, exist_ok=True)
-            output_path = os.path.join(output_directory, f"semantic_alignment_{self.model_name}.csv")
+            output_path = os.path.join(output_directory, f"semantic_alignment_{self.model_name}_lag{lag}.csv")
             result_df.to_csv(output_path, index=False)
             print(f"Results saved to {output_path}")
         
