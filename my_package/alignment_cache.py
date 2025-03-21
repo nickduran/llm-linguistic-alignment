@@ -1,5 +1,6 @@
 # my_package/alignment.py
 import os
+import pickle
 import numpy as np
 import pandas as pd
 import torch
@@ -8,22 +9,38 @@ from tqdm import tqdm
 from .model import BertWrapper
 
 class SemanticAlignmentAnalyzer:
-    def __init__(self, model_name="bert-base-uncased", token=None):
+    def __init__(self, model_name="bert-base-uncased", token=None, cache_path=None):
         """
         Initialize the semantic alignment analyzer
         
         Args:
             model_name: Name of the BERT model to use
             token: Hugging Face token (optional)
+            cache_path: Path to embedding cache file (optional)
         """
         self.bert_wrapper = BertWrapper(model_name, token)
         self.tokenizer = self.bert_wrapper.tokenizer
         self.model = self.bert_wrapper.model
         self.model_name = model_name.split('/')[-1]  # Extract model name for column naming
+        self.cache_path = cache_path or "bert_embedding_cache.pkl"
+        self.embedding_cache = self._load_cache()
     
-    def get_embedding(self, text):
+    def _load_cache(self):
+        """Load embedding cache from file or initialize empty cache"""
+        try:
+            with open(self.cache_path, "rb") as f:
+                return pickle.load(f)
+        except FileNotFoundError:
+            return {}
+    
+    def _save_cache(self):
+        """Save embedding cache to file"""
+        with open(self.cache_path, "wb") as f:
+            pickle.dump(self.embedding_cache, f)
+    
+    def get_embedding_with_cache(self, text):
         """
-        Get BERT embedding for text
+        Get BERT embedding for text with caching
         
         Args:
             text: Text to encode
@@ -33,7 +50,14 @@ class SemanticAlignmentAnalyzer:
         """
         if text is None or not isinstance(text, str) or not text.strip():
             return None
+            
+        # Use a more specific cache key
+        cache_key = f"{self.model_name}_{text}"
+            
+        if cache_key in self.embedding_cache:
+            return self.embedding_cache[cache_key]
         
+        # Use our BertWrapper's encode method
         try:
             tokens = self.tokenizer(
                 text, 
@@ -50,12 +74,14 @@ class SemanticAlignmentAnalyzer:
                 outputs = self.model(**tokens)
                 
             last_hidden_states = outputs.last_hidden_state
+            # Get the mean of the last hidden states and convert to numpy
             embedding = torch.mean(last_hidden_states, dim=1).detach().numpy().squeeze()
             
             if embedding.size == 0:
                 print(f"Error: Empty embedding for text: '{text}'")
                 return None
                 
+            self.embedding_cache[cache_key] = embedding
             return embedding
             
         except Exception as e:
@@ -141,6 +167,7 @@ class SemanticAlignmentAnalyzer:
             
             # Check required columns
             if 'content' not in df.columns:
+                # Your sample has 'content' as a column
                 print(f"Warning: 'content' column not found in {file_path}")
                 print(f"Available columns: {df.columns.tolist()}")
                 return pd.DataFrame()
@@ -159,7 +186,7 @@ class SemanticAlignmentAnalyzer:
             # Save original filename for reference
             df['source_file'] = os.path.basename(file_path)
             
-            # Compute embeddings
+            # Compute embeddings - with explicit progress tracking
             print(f"Computing embeddings for {file_path}...")
             embedding_columns = []
             
@@ -168,10 +195,10 @@ class SemanticAlignmentAnalyzer:
                     col_name = f"{column}_embedding_{self.model_name}"
                     df[col_name] = None  # Initialize with None
                     
-                    # Process row by row
+                    # Process row by row to track progress and better handle errors
                     for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Processing {column}"):
                         if pd.notna(row[column]) and isinstance(row[column], str):
-                            df.at[idx, col_name] = self.get_embedding(row[column])
+                            df.at[idx, col_name] = self.get_embedding_with_cache(row[column])
                     
                     embedding_columns.append(col_name)
             
@@ -226,6 +253,11 @@ class SemanticAlignmentAnalyzer:
                 traceback.print_exc()
         
         print(f"Successfully processed {successful_files} out of {len(file_paths)} files")
+        
+        # Save cache
+        if not result_df.empty:
+            self._save_cache()
+            print(f"Updated embedding cache at {self.cache_path}")
         
         # Save results if output directory is provided
         if output_directory and not result_df.empty:
