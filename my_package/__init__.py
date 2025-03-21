@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .model import BertWrapper
-from .alignment_cache import SemanticAlignmentAnalyzer
+from .alignment import SemanticAlignmentAnalyzer
 
 __all__ = ['BertWrapper', 'SemanticAlignmentAnalyzer']
 

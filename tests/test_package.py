@@ -18,7 +18,7 @@ data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 print(f"Looking for data in: {data_path}")
 
 # Set the lag parameter
-lag = 2  # Use lag of 2 for testing
+lag = 1  # Use lag of 2 for testing
 
 # Process files in the folder with lag parameter
 results = analyzer.analyze_folder(
