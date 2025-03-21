@@ -1,28 +1,29 @@
-# test_package.py
-from my_package.alignment import SemanticAlignmentAnalyzer
+import sys
+import os
 
-# Initialize the analyzer
-# The cache file will be created if it doesn't exist
-analyzer = SemanticAlignmentAnalyzer(
-    model_name="bert-base-uncased",
-    cache_path="./bert_embedding_cache.pkl"  # This will be created if it doesn't exist
+# Add the parent directory to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from my_package.alignment_cache import SemanticAlignmentAnalyzer
+
+# Initialize analyzer with simplified parameters
+analyzer = SemanticAlignmentAnalyzer()
+
+# Get absolute path to the data folder
+data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                         "my_package", "data", "prepped_stan_small")
+
+print(f"Looking for data in: {data_path}")
+
+# Process files in the folder
+results = analyzer.analyze_folder(
+    folder_path=data_path,
+    output_directory="tests/results"
 )
 
-# Path to your conversation files
-folder_path = "./my_package/data/prepped_stan_small"  # Replace with your actual folder path
-output_directory = "./my_package/data"      # Replace with where you want results saved
-
-# Run the analysis - this will:
-# 1. Create the cache file if it doesn't exist
-# 2. Calculate new embeddings and update the cache
-# 3. Save the results to the output directory
-result_df = analyzer.analyze_folder(
-    folder_path=folder_path,
-    output_directory=output_directory
-)
-
-# # Show a sample of the results
-# print(result_df.head())
-
-
-
+# Inspect results
+print(f"\nProcessed {len(results)} rows")
+if not results.empty:
+    print(f"Columns: {results.columns.tolist()}")
+else:
+    print("No results were generated. Check the error messages above.")

@@ -13,10 +13,11 @@ class BertWrapper:
         """
         self.token = get_huggingface_token(token)
         
-        # Update tokenizer initialization - remove the problematic parameter
+        # Update tokenizer initialization with clean_up_tokenization_spaces parameter
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_name, 
-            token=self.token
+            token=self.token,
+            clean_up_tokenization_spaces=True  # Explicitly set this parameter
         )
         
         self.model = AutoModel.from_pretrained(
