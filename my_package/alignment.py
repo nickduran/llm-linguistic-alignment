@@ -86,7 +86,7 @@ class SemanticAlignmentAnalyzer:
             df['utter_order'] = df['participant'] + ' ' + df['participant'].shift(-lag)
         
         return df
-    
+        
     def calculate_cosine_similarity(self, df, embedding_pairs):
         """
         Computes cosine similarities between pairs of vectors
@@ -103,13 +103,17 @@ class SemanticAlignmentAnalyzer:
             
             for _, row in df.iterrows():
                 # Check if both embeddings exist and are not None
-                if isinstance(row.get(col1), np.ndarray) and isinstance(row.get(col2), np.ndarray):
+                if isinstance(row.get(col1), list) and isinstance(row.get(col2), list):
+                    # Convert lists back to numpy arrays for similarity calculation
+                    embed1 = np.array(row[col1])
+                    embed2 = np.array(row[col2])
+                    
                     # Check if embeddings are not empty
-                    if row[col1].size > 0 and row[col2].size > 0:
+                    if embed1.size > 0 and embed2.size > 0:
                         try:
                             sim = cosine_similarity(
-                                row[col1].reshape(1, -1), 
-                                row[col2].reshape(1, -1)
+                                embed1.reshape(1, -1), 
+                                embed2.reshape(1, -1)
                             )[0][0]
                             similarities.append(sim)
                         except Exception as e:
@@ -242,6 +246,35 @@ class SemanticAlignmentAnalyzer:
                 traceback.print_exc()
         
         print(f"Successfully processed {successful_files} out of {len(file_paths)} files")
+        
+        # Rename the similarity column to a simpler format
+        old_col_name = f"content1_embedding_{self.model_name}_content2_embedding_{self.model_name}_cosine_similarity"
+        new_col_name = f"{self.model_name}_cosine_similarity"
+        
+        if old_col_name in result_df.columns:
+            result_df = result_df.rename(columns={old_col_name: new_col_name})
+        
+        # Reorder and select only the specified columns
+        desired_columns = [
+            "source_file",
+            "participant",
+            "content",
+            "lag",
+            "content1",
+            "content2",
+            "utter_order",
+            f"content1_embedding_{self.model_name}",
+            f"content1_embedding_dims",
+            f"content2_embedding_{self.model_name}",
+            f"content2_embedding_dims",
+            new_col_name
+        ]
+        
+        # Filter to include only columns that exist in the DataFrame
+        final_columns = [col for col in desired_columns if col in result_df.columns]
+        
+        # Reorder the columns
+        result_df = result_df[final_columns]
         
         # Save results if output directory is provided
         if output_directory and not result_df.empty:
