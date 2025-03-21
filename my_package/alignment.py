@@ -175,7 +175,17 @@ class SemanticAlignmentAnalyzer:
                     # Process row by row
                     for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Processing {column}"):
                         if pd.notna(row[column]) and isinstance(row[column], str):
-                            df.at[idx, col_name] = self.get_embedding(row[column])
+                            # Get the embedding
+                            embedding = self.get_embedding(row[column])
+                            
+                            # Store the embedding directly in the DataFrame
+                            if embedding is not None:
+                                # Store the embedding as a serialized representation
+                                # This makes it viewable and preserves the data
+                                df.at[idx, col_name] = embedding.tolist()
+                                
+                                # Add a dimension indicator column for verification
+                                df.at[idx, f"{col_name}_dims"] = embedding.shape[0] if hasattr(embedding, 'shape') else 0
                     
                     embedding_columns.append(col_name)
             
