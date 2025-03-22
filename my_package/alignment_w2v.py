@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import re
+import ast
 from collections import Counter
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,35 +20,55 @@ class SemanticAlignmentW2V:
         """
         self.w2v_wrapper = Word2VecWrapper(model_name, cache_dir)
         self.model_name = model_name.split('/')[-1]  # Extract model name for column naming
-        self.vocabulary = None
+        self.vocab_all = None  # All vocabulary words
+        self.vocab_filtered = None  # Filtered vocabulary words
         
-    def build_vocabulary(self, data, high_sd_cutoff=3, low_n_cutoff=1):
+    def build_vocabulary(self, data, high_sd_cutoff=3, low_n_cutoff=1, output_directory=None):
         """
-        Build a filtered vocabulary from the data
+        Constructs a vocabulary from the 'lemma' column of the input DataFrame,
+        applying frequency-based filtering: words occurring less frequently
+        than low_n_cutoff or more frequently than a certain standard deviation
+        above the mean (high_sd_cutoff) are filtered out.
         
         Args:
             data: DataFrame containing text data
             high_sd_cutoff: Standard deviation cutoff for high-frequency words
             low_n_cutoff: Minimum frequency cutoff
+            output_directory: Directory to save vocabulary lists (optional)
             
         Returns:
-            list: Filtered vocabulary
+            tuple: (all words list, filtered words list)
         """
         # Extract words from the 'lemma' column if it exists, otherwise use 'content'
         column = 'lemma' if 'lemma' in data.columns else 'content'
         
         # Convert string representations of lists to actual lists if needed
-        if data[column].dtype == 'object' and data[column].str.startswith('[').any():
-            import ast
-            all_words = [word for row in data[column] for word in ast.literal_eval(row) if isinstance(row, str)]
-        else:
-            all_sentences = [re.sub(r'[^\w\s]+', '', str(row)).split() for row in data[column]]
-            all_words = [word for sentence in all_sentences for word in sentence]
+        all_words = []
+        for row in data[column]:
+            if pd.isna(row):
+                continue
+                
+            if isinstance(row, str):
+                if row.startswith('[') and row.endswith(']'):
+                    try:
+                        # Try to parse as a list
+                        words = ast.literal_eval(row)
+                        all_words.extend(words)
+                    except:
+                        # If parsing fails, process as regular text
+                        words = re.sub(r'[^\w\s]+', '', row).split()
+                        all_words.extend(words)
+                else:
+                    # Process as regular text
+                    words = re.sub(r'[^\w\s]+', '', row).split()
+                    all_words.extend(words)
+            elif isinstance(row, list):
+                all_words.extend(row)
         
         # Count word frequencies
         frequency = Counter(all_words)
         
-        # Apply low frequency filter
+        # Apply low frequency filter for filtered vocabulary
         frequency_filt = {word: freq for word, freq in frequency.items() if len(word) > 1 and freq > low_n_cutoff}
         
         # Apply high frequency filter if specified
@@ -58,10 +79,38 @@ class SemanticAlignmentW2V:
             filtered_words = {word: freq for word, freq in frequency_filt.items() if freq < cutoff_freq}
         else:
             filtered_words = frequency_filt
-            
-        self.vocabulary = list(filtered_words.keys())
-        return self.vocabulary
         
+        # Create DataFrames with frequency information
+        vocabfreq_all = pd.DataFrame(frequency.items(), columns=["word", "count"]).sort_values(by='count', ascending=False)
+        vocabfreq_filt = pd.DataFrame(filtered_words.items(), columns=["word", "count"]).sort_values(by='count', ascending=False)
+        
+        # Save to files if output directory is provided
+        if output_directory:
+            os.makedirs(output_directory, exist_ok=True)
+            vocabfreq_all.to_csv(os.path.join(output_directory, 'vocab_unfilt_freqs.txt'), encoding='utf-8', index=False, sep='\t')
+            vocabfreq_filt.to_csv(os.path.join(output_directory, 'vocab_filt_freqs.txt'), encoding='utf-8', index=False, sep='\t')
+        
+        # Store vocabularies in instance variables
+        self.vocab_all = list(frequency.keys())
+        self.vocab_filtered = list(filtered_words.keys())
+        
+        return self.vocab_all, self.vocab_filtered
+        
+    def filter_tokens(self, tokens):
+        """
+        Filter tokens based on the filtered vocabulary
+        
+        Args:
+            tokens: List of tokens to filter
+            
+        Returns:
+            list: Filtered tokens
+        """
+        if not tokens or not self.vocab_filtered:
+            return tokens
+            
+        return [token for token in tokens if token in self.vocab_filtered]
+    
     def get_embedding(self, tokens):
         """
         Get Word2Vec embedding for tokens
@@ -76,10 +125,13 @@ class SemanticAlignmentW2V:
             return None
             
         # Filter tokens by vocabulary if available
-        if self.vocabulary:
-            tokens = [token for token in tokens if token in self.vocabulary]
+        if self.vocab_filtered:
+            tokens = self.filter_tokens(tokens)
             
-        return self.w2v_wrapper.get_text_embedding(tokens)
+        # Create a cache key from the tokens
+        cache_key = str(tokens)
+            
+        return self.w2v_wrapper.get_text_embedding(tokens, cache_key)
     
     def pair_and_lag_columns(self, df, columns_to_lag, suffix1='1', suffix2='2', lag=1):
         """
@@ -259,7 +311,8 @@ class SemanticAlignmentW2V:
             traceback.print_exc()  # Print the full stack trace for debugging
             return pd.DataFrame()  # Return empty dataframe on error
     
-    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, build_vocab=True):
+    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
+                    high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True):
         """
         Analyze semantic alignment for all text files in a folder
         
@@ -268,7 +321,9 @@ class SemanticAlignmentW2V:
             output_directory: Directory to save results (optional)
             file_pattern: Pattern to match text files (default: "*.txt")
             lag: Number of turns to lag when pairing utterances (default: 1)
-            build_vocab: Whether to build a vocabulary from all files (default: True)
+            high_sd_cutoff: Standard deviation cutoff for high-frequency words (default: 3)
+            low_n_cutoff: Minimum frequency cutoff (default: 1)
+            save_vocab: Whether to save vocabulary lists to output_directory (default: True)
             
         Returns:
             pd.DataFrame: Concatenated results for all files
@@ -285,22 +340,27 @@ class SemanticAlignmentW2V:
         
         print(f"Found {len(file_paths)} files to process with lag {lag}")
         
-        # Build vocabulary from all files if requested
-        if build_vocab:
-            print("Building vocabulary from all files...")
-            all_data = pd.DataFrame()
-            for file_path in file_paths:
-                try:
-                    df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
-                    all_data = pd.concat([all_data, df], ignore_index=True)
-                except Exception as e:
-                    print(f"Error reading {file_path} for vocabulary building: {e}")
+        # Build vocabulary from all files
+        print("Building vocabulary from all files...")
+        all_data = pd.DataFrame()
+        for file_path in file_paths:
+            try:
+                df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
+                all_data = pd.concat([all_data, df], ignore_index=True)
+            except Exception as e:
+                print(f"Error reading {file_path} for vocabulary building: {e}")
+        
+        if not all_data.empty:
+            # Only pass output_directory to build_vocabulary if save_vocab is True
+            vocab_save_dir = output_directory if save_vocab else None
+            self.build_vocabulary(all_data, high_sd_cutoff, low_n_cutoff, vocab_save_dir)
+            print(f"Built vocabulary with {len(self.vocab_all)} total words and {len(self.vocab_filtered)} filtered words")
             
-            if not all_data.empty:
-                self.build_vocabulary(all_data)
-                print(f"Built vocabulary with {len(self.vocabulary)} words")
-            else:
-                print("Warning: Could not build vocabulary from files")
+            # If save_vocab is True, report where files were saved
+            if save_vocab and output_directory:
+                print(f"Vocabulary lists saved to {output_directory}")
+        else:
+            print("Warning: Could not build vocabulary from files")
         
         # Process each file
         successful_files = 0
