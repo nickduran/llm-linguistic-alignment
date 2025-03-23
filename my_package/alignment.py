@@ -1,4 +1,5 @@
 # my_package/alignment.py
+import os
 from .alignment_bert import SemanticAlignmentAnalyzer
 from .alignment_w2v import SemanticAlignmentW2V
 
@@ -10,8 +11,8 @@ class SemanticAlignment:
         Args:
             embedding_model: Type of embedding model to use ('bert' or 'word2vec')
             model_name: Name of the specific model to use (optional)
-            token: API token for model access (optional)
-            cache_dir: Directory to cache models and embeddings (optional)
+            token: API token for model access (optional, needed for BERT only)
+            cache_dir: Directory to cache models (optional)
         """
         self.embedding_model = embedding_model.lower()
         

@@ -4,6 +4,7 @@ import numpy as np
 import gensim
 import gensim.downloader as api
 import pickle
+import warnings
 
 class Word2VecWrapper:
     def __init__(self, model_name="word2vec-google-news-300", cache_dir=None):
@@ -16,49 +17,51 @@ class Word2VecWrapper:
         """
         self.model_name = model_name
         
-        # Set up cache directory
+        # Set default cache directory if none provided
         if cache_dir is None:
-            cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "my_package", "models")
+            cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "align", "models")
+        
+        # Create directory if it doesn't exist
         os.makedirs(cache_dir, exist_ok=True)
         self.cache_dir = cache_dir
         
-        # Configure Gensim to use the cache directory
-        api.BASE_DIR = cache_dir
+        # Tell Gensim to use this directory for downloading models
+        api.BASE_DIR = self.cache_dir
         
-        # Initialize embedding cache
-        self.embedding_cache_path = os.path.join(self.cache_dir, f"{self.model_name}_embedding_cache.pkl")
-        self.embedding_cache = self._load_embedding_cache()
-        
-        # Load the model
+        # Load the model (calling another method)
         self.model = self._load_model()
     
     def _load_model(self):
         """
-        Load Word2Vec model, checking global namespace first
+        Load Word2Vec model from Gensim or local cache
         
         Returns:
             gensim.models.KeyedVectors: Loaded model
         """
-        # Check if model is already loaded in global namespace
-        global_vars = globals()
-        model_var_name = f"{self.model_name.replace('-', '_')}_model"
-        
-        if model_var_name in global_vars and global_vars[model_var_name] is not None:
-            print(f"Using {self.model_name} model from global namespace")
-            return global_vars[model_var_name]
-        
-        # Try to load from gensim
         try:
             print(f"Loading model: {self.model_name}")
+            # Check if model directory exists
+            model_path = os.path.join(self.gensim_data_dir, self.model_name)
+            
+            if os.path.exists(model_path):
+                print(f"Model directory exists: {model_path}")
+                
+                # For common models, check specific file paths
+                if self.model_name == "word2vec-google-news-300":
+                    bin_path = os.path.join(model_path, f"{self.model_name}.gz")
+                    if os.path.exists(bin_path):
+                        print(f"Loading model from: {bin_path}")
+                        return gensim.models.KeyedVectors.load_word2vec_format(bin_path, binary=True)
+            
+            # If not found in cache or error in loading, download via API
+            print(f"Downloading model via gensim API to: {self.gensim_data_dir}")
             model = api.load(self.model_name)
-            print(f"Model loaded: {self.model_name}")
-            
-            # Store in global namespace for future use
-            global_vars[model_var_name] = model
-            
+            print(f"Model loaded successfully: {self.model_name}")
             return model
+            
         except Exception as e:
-            print(f"Error loading model {self.model_name}: {e}")
+            print(f"Error loading model {self.model_name}: {str(e)}")
+            warnings.warn(f"Failed to load model {self.model_name}. Analysis will proceed but may not work correctly.")
             return None
     
     def _load_embedding_cache(self):
@@ -75,7 +78,7 @@ class Word2VecWrapper:
                 print(f"Loaded embedding cache with {len(cache)} entries")
                 return cache
             except Exception as e:
-                print(f"Error loading embedding cache: {e}")
+                print(f"Error loading embedding cache: {str(e)}")
         
         return {}
     
@@ -86,7 +89,7 @@ class Word2VecWrapper:
                 pickle.dump(self.embedding_cache, f)
             print(f"Saved embedding cache with {len(self.embedding_cache)} entries")
         except Exception as e:
-            print(f"Error saving embedding cache: {e}")
+            print(f"Error saving embedding cache: {str(e)}")
     
     def get_word_embedding(self, word):
         """Get embedding for a single word"""

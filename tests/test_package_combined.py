@@ -27,27 +27,27 @@ data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 print(f"Looking for data in: {data_path}")
 
 # Option 1: BERT with default settings (Word2Vec-specific parameters are ignored)
-bert_analyzer = SemanticAlignment(embedding_model="bert")
-bert_results = bert_analyzer.analyze_folder(
-    folder_path=data_path,
-    output_directory="tests/results/bert",
-    lag=1
-)
-
-# # Option 2: Word2Vec with customized vocabulary filtering
-# w2v_analyzer = SemanticAlignment(embedding_model="word2vec")
-# w2v_results = w2v_analyzer.analyze_folder(
+# bert_analyzer = SemanticAlignment(embedding_model="bert")
+# bert_results = bert_analyzer.analyze_folder(
 #     folder_path=data_path,
-#     output_directory="tests/results/word2vec",
-#     lag=1,
-#     high_sd_cutoff=2.5,  # More aggressive filtering of high-frequency words
-#     low_n_cutoff=1,      # Filter out words occurring less than twice
-#     save_vocab=True      # Save vocabulary lists to output directory
+#     output_directory="tests/results/bert",
+#     lag=1
 # )
 
+# Option 2: Word2Vec with customized vocabulary filtering
+w2v_analyzer = SemanticAlignment(embedding_model="word2vec")
+w2v_results = w2v_analyzer.analyze_folder(
+    folder_path=data_path,
+    output_directory="tests/results/word2vec",
+    lag=1,
+    high_sd_cutoff=2.5,  # More aggressive filtering of high-frequency words
+    low_n_cutoff=1,      # Filter out words occurring less than twice
+    save_vocab=True      # Save vocabulary lists to output directory
+)
+
 # Compare results
-print(f"BERT results: {len(bert_results)} rows")
-# print(f"Word2Vec results: {len(w2v_results)} rows")
+# print(f"BERT results: {len(bert_results)} rows")
+print(f"Word2Vec results: {len(w2v_results)} rows")
 
 
 
