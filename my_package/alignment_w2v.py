@@ -158,13 +158,14 @@ class SemanticAlignmentW2V:
         
         return df
         
-    def calculate_cosine_similarity(self, df, embedding_pairs):
+    def calculate_cosine_similarity(self, df, embedding_pairs, col_prefix=None):
         """
         Computes cosine similarities between pairs of vectors
         
         Args:
             df: DataFrame containing embeddings
             embedding_pairs: List of (col1, col2) tuples to compare
+            col_prefix: Optional prefix for the similarity column name (e.g., 'content', 'token', 'lemma')
             
         Returns:
             pd.DataFrame: DataFrame with similarity columns added
@@ -173,29 +174,49 @@ class SemanticAlignmentW2V:
             similarities = []
             
             for _, row in df.iterrows():
-                # Check if both embeddings exist and are not None
-                if isinstance(row.get(col1), np.ndarray) and isinstance(row.get(col2), np.ndarray):
-                    embed1 = row[col1]
-                    embed2 = row[col2]
-                    
-                    # Check if embeddings are not empty
-                    if embed1.size > 0 and embed2.size > 0:
-                        try:
+                # Check if both embeddings exist and aren't None
+                if col1 in row and col2 in row and row[col1] is not None and row[col2] is not None:
+                    try:
+                        # Convert to numpy arrays if stored as lists
+                        if isinstance(row[col1], list):
+                            embed1 = np.array(row[col1])
+                        else:
+                            embed1 = row[col1]
+                            
+                        if isinstance(row[col2], list):
+                            embed2 = np.array(row[col2])
+                        else:
+                            embed2 = row[col2]
+                        
+                        # Check dimensions
+                        if embed1.size > 0 and embed2.size > 0:
+                            # Calculate cosine similarity
                             sim = cosine_similarity(
                                 embed1.reshape(1, -1), 
                                 embed2.reshape(1, -1)
                             )[0][0]
                             similarities.append(sim)
-                        except Exception as e:
-                            print(f"Error calculating similarity: {e}")
+                        else:
+                            print(f"Empty embedding encountered")
                             similarities.append(None)
-                    else:
+                    except Exception as e:
+                        print(f"Error calculating similarity for row: {e}")
                         similarities.append(None)
                 else:
                     similarities.append(None)
             
-            similarity_column_name = f"{col1}_{col2}_cosine_similarity"
+            # Create similarity column name with prefix if provided
+            if col_prefix:
+                similarity_column_name = f"{col_prefix}_{self.model_name}_cosine_similarity"
+            else:
+                similarity_column_name = f"{self.model_name}_cosine_similarity"
+            
+            # Add similarities to DataFrame
             df[similarity_column_name] = similarities
+            
+            # Add debugging
+            non_null = sum(x is not None for x in similarities)
+            print(f"Added {non_null} similarity scores to column {similarity_column_name}")
         
         return df
     
@@ -271,7 +292,9 @@ class SemanticAlignmentW2V:
             
             # Compute embeddings
             print(f"Computing embeddings for {file_path}...")
-            embedding_columns = []
+            content_embedding_columns = []
+            token_embedding_columns = []
+            lemma_embedding_columns = []
             embedding_count = 0
             
             # Process content embeddings
@@ -305,52 +328,163 @@ class SemanticAlignmentW2V:
                     
                     # Add to embeddings columns list if we have any values
                     if df[col_name].notna().any():
-                        embedding_columns.append(col_name)
+                        content_embedding_columns.append(col_name)
             
-            print(f"Total embeddings computed: {embedding_count}")
+            print(f"Total content embeddings computed: {embedding_count}")
             
-            # Process token or lemma embeddings if available
-            for base_col in ["token", "lemma"]:
-                for suffix in ["1", "2"]:
-                    column = f"{base_col}{suffix}"
-                    if column in df.columns:
-                        col_name = f"{column}_embedding_{self.model_name}"
-                        df[col_name] = None  # Initialize with None
-                        
-                        # Process row by row
-                        for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Processing {column}"):
-                            tokens = row[column]
-                            if tokens is not None and (isinstance(tokens, list) or (isinstance(tokens, str) and tokens.startswith('['))):
-                                # Convert string representation to list if needed
-                                if isinstance(tokens, str) and tokens.startswith('['):
-                                    import ast
-                                    try:
-                                        tokens = ast.literal_eval(tokens)
-                                    except:
-                                        print(f"Error parsing tokens: {tokens}")
-                                        continue
-                                
-                                # Get the embedding
-                                cache_key = f"{idx}_{column}_{str(tokens)}"
-                                embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
-                                
-                                # Store the embedding
-                                if embedding is not None:
-                                    df.at[idx, col_name] = embedding.tolist()
-                                    df.at[idx, f"{col_name}_dims"] = embedding.shape[0]
-                        
-                        # Add to embeddings columns list if we have any values
-                        if df[col_name].notna().any():
-                            embedding_columns.append(col_name)
+            # Process token embeddings
+            token_embed_count = 0
+            for suffix in ["1", "2"]:
+                column = f"token{suffix}"
+                if column in df.columns:
+                    col_name = f"{column}_embedding_{self.model_name}"
+                    df[col_name] = None  # Initialize with None
+                    
+                    # Process row by row
+                    for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Processing {column}"):
+                        tokens = row[column]
+                        if tokens is not None and (isinstance(tokens, list) or (isinstance(tokens, str) and tokens.startswith('['))):
+                            # Convert string representation to list if needed
+                            if isinstance(tokens, str) and tokens.startswith('['):
+                                import ast
+                                try:
+                                    tokens = ast.literal_eval(tokens)
+                                except:
+                                    print(f"Error parsing tokens: {tokens}")
+                                    continue
+                            
+                            # Get the embedding
+                            cache_key = f"{idx}_{column}_{str(tokens)}"
+                            embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
+                            
+                            # Store the embedding
+                            if embedding is not None:
+                                token_embed_count += 1
+                                df.at[idx, col_name] = embedding.tolist()
+                                df.at[idx, f"{col_name}_dims"] = embedding.shape[0]
+                    
+                    # Add to embeddings columns list if we have any values
+                    if df[col_name].notna().any():
+                        token_embedding_columns.append(col_name)
             
-            # Calculate cosine similarities if we have embeddings
-            if len(embedding_columns) >= 2:
-                embedding_pairs = [(embedding_columns[0], embedding_columns[1])]
-                print(f"Computing similarities between {embedding_columns[0]} and {embedding_columns[1]}")
-                df = self.calculate_cosine_similarity(df, embedding_pairs)
-                print(f"Computed {sum(df[f'{embedding_columns[0]}_{embedding_columns[1]}_cosine_similarity'].notna())} similarity scores")
+            print(f"Total token embeddings computed: {token_embed_count}")
+            
+            # Process lemma embeddings
+            lemma_embed_count = 0
+            for suffix in ["1", "2"]:
+                column = f"lemma{suffix}"
+                if column in df.columns:
+                    col_name = f"{column}_embedding_{self.model_name}"
+                    df[col_name] = None  # Initialize with None
+                    
+                    # Process row by row
+                    for idx, row in tqdm(df.iterrows(), total=len(df), desc=f"Processing {column}"):
+                        tokens = row[column]
+                        if tokens is not None and (isinstance(tokens, list) or (isinstance(tokens, str) and tokens.startswith('['))):
+                            # Convert string representation to list if needed
+                            if isinstance(tokens, str) and tokens.startswith('['):
+                                import ast
+                                try:
+                                    tokens = ast.literal_eval(tokens)
+                                except:
+                                    print(f"Error parsing tokens: {tokens}")
+                                    continue
+                            
+                            # Get the embedding
+                            cache_key = f"{idx}_{column}_{str(tokens)}"
+                            embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
+                            
+                            # Store the embedding
+                            if embedding is not None:
+                                lemma_embed_count += 1
+                                df.at[idx, col_name] = embedding.tolist()
+                                df.at[idx, f"{col_name}_dims"] = embedding.shape[0]
+                    
+                    # Add to embeddings columns list if we have any values
+                    if df[col_name].notna().any():
+                        lemma_embedding_columns.append(col_name)
+            
+            print(f"Total lemma embeddings computed: {lemma_embed_count}")
+            
+            # Calculate cosine similarities for each embedding type
+            # Content similarities
+            if len(content_embedding_columns) >= 2:
+                embedding_pairs = [(content_embedding_columns[0], content_embedding_columns[1])]
+                print(f"Computing content similarities...")
+                df = self.calculate_cosine_similarity(df, embedding_pairs, col_prefix="content")
+                content_sim_col = f"content_{self.model_name}_cosine_similarity"
+                print(f"Computed {df[content_sim_col].notna().sum()} content similarity scores")
             else:
-                print("Not enough embeddings to compute similarities")
+                print("Not enough content embeddings to compute similarities")
+                
+            # Token similarities
+            if len(token_embedding_columns) >= 2:
+                embedding_pairs = [(token_embedding_columns[0], token_embedding_columns[1])]
+                print(f"Computing token similarities...")
+                df = self.calculate_cosine_similarity(df, embedding_pairs, col_prefix="token")
+                token_sim_col = f"token_{self.model_name}_cosine_similarity"
+                print(f"Computed {df[token_sim_col].notna().sum()} token similarity scores")
+            else:
+                print("Not enough token embeddings to compute similarities")
+                
+            # Lemma similarities
+            if len(lemma_embedding_columns) >= 2:
+                embedding_pairs = [(lemma_embedding_columns[0], lemma_embedding_columns[1])]
+                print(f"Computing lemma similarities...")
+                df = self.calculate_cosine_similarity(df, embedding_pairs, col_prefix="lemma")
+                lemma_sim_col = f"lemma_{self.model_name}_cosine_similarity"
+                print(f"Computed {df[lemma_sim_col].notna().sum()} lemma similarity scores")
+            else:
+                print("Not enough lemma embeddings to compute similarities")
+                
+            # Calculate master similarity score (average of all similarity scores)
+            sim_columns = [
+                f"content_{self.model_name}_cosine_similarity",
+                f"token_{self.model_name}_cosine_similarity", 
+                f"lemma_{self.model_name}_cosine_similarity"
+            ]
+            
+            # Only use columns that exist in the DataFrame
+            available_sim_columns = [col for col in sim_columns if col in df.columns]
+            
+            if available_sim_columns:
+                print(f"Computing master similarity score from {len(available_sim_columns)} metrics...")
+                
+                # Create a new column with the average of available similarity scores
+                df[f"master_{self.model_name}_cosine_similarity"] = df[available_sim_columns].mean(axis=1)
+                print(f"Computed {df[f'master_{self.model_name}_cosine_similarity'].notna().sum()} master similarity scores")
+            
+            # Drop unnecessary columns
+            columns_to_drop = ['tagged_token', 'tagged_lemma', 'tagged_stan_token', 'tagged_stan_lemma', 'file']
+            df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
+            
+            # Reorder columns
+            desired_column_order = [
+                'source_file', 'participant', 'content', 'token', 'lemma', 'lag', 
+                'content1', 'content2', 'lemma1', 'lemma2', 'token1', 'token2', 'utter_order',
+                'content1_embedding_word2vec-google-news-300', 'content1_embedding_word2vec-google-news-300_dims',
+                'content2_embedding_word2vec-google-news-300', 'content2_embedding_word2vec-google-news-300_dims',
+                'token1_embedding_word2vec-google-news-300', 'token1_embedding_word2vec-google-news-300_dims',
+                'token2_embedding_word2vec-google-news-300', 'token2_embedding_word2vec-google-news-300_dims',
+                'lemma1_embedding_word2vec-google-news-300', 'lemma1_embedding_word2vec-google-news-300_dims',
+                'lemma2_embedding_word2vec-google-news-300', 'lemma2_embedding_word2vec-google-news-300_dims'
+            ]
+            
+            # Add similarity columns to the end
+            for col in df.columns:
+                if 'cosine_similarity' in col:
+                    desired_column_order.append(col)
+            
+            # Only include columns that exist
+            final_column_order = [col for col in desired_column_order if col in df.columns]
+            
+            # Add any remaining columns that might not be in our desired order
+            for col in df.columns:
+                if col not in final_column_order:
+                    final_column_order.append(col)
+            
+            # Reorder the DataFrame
+            df = df[final_column_order]
             
             # Save embedding cache
             self.w2v_wrapper.save_embedding_cache()
@@ -362,7 +496,8 @@ class SemanticAlignmentW2V:
             import traceback
             traceback.print_exc()  # Print the full stack trace for debugging
             return pd.DataFrame()  # Return empty dataframe on error
-    
+        
+
     def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
                     high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True):
         """
