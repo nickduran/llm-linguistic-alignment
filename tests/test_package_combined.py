@@ -26,7 +26,7 @@ data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 print(f"Looking for data in: {data_path}")
 
-# Option 1: BERT with default settings (Word2Vec-specific parameters are ignored)
+# BERT with default settings (Word2Vec-specific parameters are ignored)
 # bert_analyzer = SemanticAlignment(embedding_model="bert")
 # bert_results = bert_analyzer.analyze_folder(
 #     folder_path=data_path,
@@ -34,14 +34,18 @@ print(f"Looking for data in: {data_path}")
 #     lag=1
 # )
 
-# Option 2: Word2Vec with customized vocabulary filtering
-w2v_analyzer = SemanticAlignment(embedding_model="word2vec")
+# Set up Word2Vec analyzer with custom settings
+w2v_analyzer = SemanticAlignment(
+    embedding_model="word2vec",
+    cache_dir="tests/results/word2vec/cache"
+)
+# Word2Vec with customized vocabulary filtering
 w2v_results = w2v_analyzer.analyze_folder(
     folder_path=data_path,
     output_directory="tests/results/word2vec",
     lag=1,
-    high_sd_cutoff=2.5,  # More aggressive filtering of high-frequency words
-    low_n_cutoff=1,      # Filter out words occurring less than twice
+    high_sd_cutoff=2.5,  # Filter out words with frequency > mean + 3*std
+    low_n_cutoff=1,      # Filter out words occurring < 1 times
     save_vocab=True      # Save vocabulary lists to output directory
 )
 
@@ -68,3 +72,28 @@ print(f"Word2Vec results: {len(w2v_results)} rows")
 #     print(f"Columns: {results.columns.tolist()}")
 # else:
 #     print("No results were generated. Check the error messages above.")
+
+# Check the structure of the resulting DataFrame
+print("\nAnalyzing results DataFrame:")
+print(f"Columns in result: {w2v_results.columns.tolist()}")
+
+# Check if embedding columns exist
+embedding_cols = [col for col in w2v_results.columns if 'embedding' in col]
+if embedding_cols:
+    print(f"Found embedding columns: {embedding_cols}")
+    # Check a sample
+    for col in embedding_cols:
+        non_null = w2v_results[col].notna().sum()
+        print(f"Column {col}: {non_null} non-null values")
+else:
+    print("No embedding columns found!")
+
+# Check similarity columns
+similarity_cols = [col for col in w2v_results.columns if 'similarity' in col]
+if similarity_cols:
+    print(f"Found similarity columns: {similarity_cols}")
+    for col in similarity_cols:
+        non_null = w2v_results[col].notna().sum()
+        print(f"Column {col}: {non_null} non-null values")
+else:
+    print("No similarity columns found!")

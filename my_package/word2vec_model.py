@@ -17,50 +17,68 @@ class Word2VecWrapper:
         """
         self.model_name = model_name
         
-        # Set default cache directory if none provided
+        # Set up cache directory
         if cache_dir is None:
+            # Default location
             cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "align", "models")
         
-        # Create directory if it doesn't exist
+        # Create the cache directory if it doesn't exist
         os.makedirs(cache_dir, exist_ok=True)
         self.cache_dir = cache_dir
         
-        # Tell Gensim to use this directory for downloading models
+        # Set Gensim's download directory
         api.BASE_DIR = self.cache_dir
         
-        # Load the model (calling another method)
+        # Initialize embedding cache
+        self.embedding_cache_path = os.path.join(self.cache_dir, f"{self.model_name}_embedding_cache.pkl")
+        self.embedding_cache = self._load_embedding_cache()
+        
+        # Load the model
         self.model = self._load_model()
+        
+        # Print cache information
+        print(f"Using model cache directory: {self.cache_dir}")
+        print(f"Using embedding cache: {self.embedding_cache_path}")
     
     def _load_model(self):
         """
-        Load Word2Vec model from Gensim or local cache
+        Load Word2Vec model from Gensim
         
         Returns:
             gensim.models.KeyedVectors: Loaded model
         """
         try:
             print(f"Loading model: {self.model_name}")
-            # Check if model directory exists
-            model_path = os.path.join(self.gensim_data_dir, self.model_name)
+            print(f"Using model cache directory: {self.cache_dir}")
             
-            if os.path.exists(model_path):
-                print(f"Model directory exists: {model_path}")
+            # Check if the model file exists in cache
+            model_dir = os.path.join(self.cache_dir, self.model_name)
+            if os.path.exists(model_dir):
+                print(f"Found model directory: {model_dir}")
                 
-                # For common models, check specific file paths
-                if self.model_name == "word2vec-google-news-300":
-                    bin_path = os.path.join(model_path, f"{self.model_name}.gz")
-                    if os.path.exists(bin_path):
-                        print(f"Loading model from: {bin_path}")
-                        return gensim.models.KeyedVectors.load_word2vec_format(bin_path, binary=True)
+                # List contents
+                contents = os.listdir(model_dir)
+                print(f"Directory contents: {contents}")
+                
+                # Try to find the .gz file for common models
+                gz_files = [f for f in contents if f.endswith('.gz')]
+                if gz_files:
+                    model_path = os.path.join(model_dir, gz_files[0])
+                    print(f"Loading model from: {model_path}")
+                    return gensim.models.KeyedVectors.load_word2vec_format(model_path, binary=True)
             
-            # If not found in cache or error in loading, download via API
-            print(f"Downloading model via gensim API to: {self.gensim_data_dir}")
+            # If not found in cache, download via API
+            print(f"Model not found in cache. Downloading via gensim API to: {self.cache_dir}")
             model = api.load(self.model_name)
             print(f"Model loaded successfully: {self.model_name}")
             return model
             
         except Exception as e:
             print(f"Error loading model {self.model_name}: {str(e)}")
+            print(f"Current working directory: {os.getcwd()}")
+            print(f"Detailed error information:")
+            import traceback
+            traceback.print_exc()
             warnings.warn(f"Failed to load model {self.model_name}. Analysis will proceed but may not work correctly.")
             return None
     
@@ -93,6 +111,9 @@ class Word2VecWrapper:
     
     def get_word_embedding(self, word):
         """Get embedding for a single word"""
+        if self.model is None:
+            return None
+            
         if word in self.model.key_to_index:
             return self.model[word]
         return None
@@ -112,7 +133,7 @@ class Word2VecWrapper:
         if cache_key and cache_key in self.embedding_cache:
             return self.embedding_cache[cache_key]
         
-        if tokens is None or not tokens:
+        if tokens is None or not tokens or self.model is None:
             return None
             
         # Get embeddings for words that are in the vocabulary
@@ -135,9 +156,5 @@ class Word2VecWrapper:
         # Cache the result if a cache_key was provided
         if cache_key:
             self.embedding_cache[cache_key] = result
-            
-            # Periodically save the cache to disk (e.g., every 100 new entries)
-            if len(self.embedding_cache) % 100 == 0:
-                self.save_embedding_cache()
         
         return result

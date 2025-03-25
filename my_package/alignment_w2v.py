@@ -237,11 +237,42 @@ class SemanticAlignmentW2V:
             # Read the file
             df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
             
-            # ... [initial processing remains the same] ...
+            # Check required columns
+            if 'content' not in df.columns:
+                print(f"Warning: 'content' column not found in {file_path}")
+                print(f"Available columns: {df.columns.tolist()}")
+                return pd.DataFrame()
+            
+            # Convert list columns if needed
+            df = self.convert_list_columns(df)
+            
+            # Pair and lag columns - ensure participant exists
+            if 'participant' in df.columns:
+                df = self.pair_and_lag_columns(df, columns_to_lag=['content', 'lemma', 'token'], lag=lag)
+            else:
+                print(f"Warning: 'participant' column not found in {file_path}, skipping participant tracking")
+                # Create lagged columns without participant tracking
+                for col in ['content', 'lemma', 'token']:
+                    if col in df.columns:
+                        df[f'{col}1'] = df[col]
+                        df[f'{col}2'] = df[col].shift(-lag)
+            
+            # Save original filename for reference
+            df['source_file'] = os.path.basename(file_path)
+            
+            # Add lag information to the dataframe
+            df['lag'] = lag
+            
+            # Check if model is loaded
+            if self.w2v_wrapper.model is None:
+                print(f"WARNING: Model is not loaded. Cannot compute embeddings for {file_path}")
+                print("Will return file with original content but no embeddings or similarity scores")
+                return df
             
             # Compute embeddings
             print(f"Computing embeddings for {file_path}...")
             embedding_columns = []
+            embedding_count = 0
             
             # Process content embeddings
             for column in ["content1", "content2"]:
@@ -255,18 +286,28 @@ class SemanticAlignmentW2V:
                             # Tokenize the content
                             tokens = row[column].lower().split()
                             
-                            # Create a cache key from the content
-                            cache_key = f"{column}_{row[column]}"
+                            # Create a cache key
+                            cache_key = f"{idx}_{column}_{row[column]}"
                             
-                            # Get the embedding with caching
+                            # Get embedding with cache
                             embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
                             
-                            # Store the embedding
+                            # Debug print for first few embeddings
                             if embedding is not None:
-                                df.at[idx, col_name] = embedding
+                                embedding_count += 1
+                                if embedding_count <= 3:
+                                    print(f"Sample embedding shape: {embedding.shape}")
+                                    print(f"First few values: {embedding[:5]}")
+                                
+                                # Store the embedding
+                                df.at[idx, col_name] = embedding.tolist()  # Store as list for DataFrame compatibility
                                 df.at[idx, f"{col_name}_dims"] = embedding.shape[0]
                     
-                    embedding_columns.append(col_name)
+                    # Add to embeddings columns list if we have any values
+                    if df[col_name].notna().any():
+                        embedding_columns.append(col_name)
+            
+            print(f"Total embeddings computed: {embedding_count}")
             
             # Process token or lemma embeddings if available
             for base_col in ["token", "lemma"]:
@@ -283,28 +324,39 @@ class SemanticAlignmentW2V:
                                 # Convert string representation to list if needed
                                 if isinstance(tokens, str) and tokens.startswith('['):
                                     import ast
-                                    tokens = ast.literal_eval(tokens)
+                                    try:
+                                        tokens = ast.literal_eval(tokens)
+                                    except:
+                                        print(f"Error parsing tokens: {tokens}")
+                                        continue
                                 
                                 # Get the embedding
-                                embedding = self.get_embedding(tokens)
+                                cache_key = f"{idx}_{column}_{str(tokens)}"
+                                embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
                                 
                                 # Store the embedding
                                 if embedding is not None:
-                                    df.at[idx, col_name] = embedding
+                                    df.at[idx, col_name] = embedding.tolist()
                                     df.at[idx, f"{col_name}_dims"] = embedding.shape[0]
                         
-                        embedding_columns.append(col_name)
+                        # Add to embeddings columns list if we have any values
+                        if df[col_name].notna().any():
+                            embedding_columns.append(col_name)
             
             # Calculate cosine similarities if we have embeddings
             if len(embedding_columns) >= 2:
                 embedding_pairs = [(embedding_columns[0], embedding_columns[1])]
+                print(f"Computing similarities between {embedding_columns[0]} and {embedding_columns[1]}")
                 df = self.calculate_cosine_similarity(df, embedding_pairs)
+                print(f"Computed {sum(df[f'{embedding_columns[0]}_{embedding_columns[1]}_cosine_similarity'].notna())} similarity scores")
+            else:
+                print("Not enough embeddings to compute similarities")
             
-            # Save the embedding cache before returning
+            # Save embedding cache
             self.w2v_wrapper.save_embedding_cache()
             
             return df
-            
+        
         except Exception as e:
             print(f"Error processing file {file_path}: {str(e)}")
             import traceback
