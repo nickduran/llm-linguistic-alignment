@@ -43,8 +43,8 @@ w2v_analyzer = SemanticAlignment(
 w2v_results = w2v_analyzer.analyze_folder(
     folder_path=data_path,
     output_directory="tests/results/word2vec",
-    lag=1,
-    high_sd_cutoff=2.5,  # Filter out words with frequency > mean + 3*std
+    lag=2,
+    high_sd_cutoff=3,  # Filter out words with frequency > mean + 3*std
     low_n_cutoff=1,      # Filter out words occurring < 1 times
     save_vocab=True      # Save vocabulary lists to output directory
 )
