@@ -48,7 +48,7 @@ lexsyn_results = lexsyn_analyzer.analyze_folder(
     folder_path=data_path,
     output_directory=os.path.join(output_folder, "lexsyn"),
     lag=1,
-    max_ngram=3,
-    ignore_duplicates=True,
-    add_stanford_tags=True  # Set to False if Stanford tags aren't available
+    max_ngram=2,
+    ignore_duplicates=False,
+    add_stanford_tags=False  
 )

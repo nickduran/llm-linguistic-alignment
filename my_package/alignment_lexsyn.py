@@ -62,7 +62,7 @@ class LexicalSyntacticAlignment:
             sequence1: First sequence of tokens or tagged tokens
             sequence2: Second sequence of tokens or tagged tokens
             ngram_size: Size of n-grams to compute
-            ignore_duplicates: Whether to ignore duplicate n-grams
+            ignore_duplicates: Whether to ignore duplicate word+tag n-grams between sequences
             is_tagged: Whether the sequences contain POS tags
             
         Returns:
@@ -71,22 +71,24 @@ class LexicalSyntacticAlignment:
         # Handle empty or None sequences
         if not sequence1 or not sequence2:
             return Counter(), Counter(), Counter(), Counter()
-            
+                
         # Generate n-grams for both sequences
         sequence1_ngrams = list(ngrams(sequence1, ngram_size))
         sequence2_ngrams = list(ngrams(sequence2, ngram_size))
 
         if is_tagged:
             # POS analysis
-            # Remove exact matches if ignore_duplicates is True
+            # For tagged sequences, first check if we need to filter out exact matches
             if ignore_duplicates:
+                # Remove n-grams that appear in both sequences (exact word+tag matches)
                 unique_sequence1_ngrams = [ngram for ngram in sequence1_ngrams if ngram not in sequence2_ngrams]
                 unique_sequence2_ngrams = [ngram for ngram in sequence2_ngrams if ngram not in sequence1_ngrams]
             else:
+                # Keep all n-grams
                 unique_sequence1_ngrams = sequence1_ngrams
                 unique_sequence2_ngrams = sequence2_ngrams
 
-            # Extract POS tags only for POS analysis
+            # Now extract only the POS tags from the n-grams (after filtering duplicates if requested)
             pos_sequence1 = [tuple(pos for _, pos in ngram) for ngram in unique_sequence1_ngrams]
             pos_sequence2 = [tuple(pos for _, pos in ngram) for ngram in unique_sequence2_ngrams]
 
@@ -97,7 +99,7 @@ class LexicalSyntacticAlignment:
             # Return counts for POS analysis
             return Counter(), Counter(), pos_sequence1_count, pos_sequence2_count
         else:
-            # Lexical analysis
+            # Lexical analysis - remains unchanged
             # Join words in each n-gram into a string
             lexical_sequence1 = [' '.join(ngram) for ngram in sequence1_ngrams]
             lexical_sequence2 = [' '.join(ngram) for ngram in sequence2_ngrams]
@@ -409,7 +411,16 @@ class LexicalSyntacticAlignment:
         # Save results if output directory is provided
         if output_directory and not result_df.empty:
             os.makedirs(output_directory, exist_ok=True)
-            output_path = os.path.join(output_directory, f"lexsyn_alignment_ngram{max_ngram}_lag{lag}.csv")
+            
+            # Create a filename that includes all parameters
+            dup_str = "noDups" if ignore_duplicates else "withDups"
+            stan_str = "withStan" if add_stanford_tags else "noStan"
+            
+            output_path = os.path.join(
+                output_directory, 
+                f"lexsyn_alignment_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
+            )
+            
             result_df.to_csv(output_path, index=False)
             print(f"Results saved to {output_path}")
         
