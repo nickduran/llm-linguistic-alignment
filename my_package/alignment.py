@@ -119,7 +119,7 @@ class SemanticAlignment:
                 )
             
             # Save a copy with the "real" prefix if we're using a model-specific directory
-            if real_path != results.to_csv(real_path, index=False)
+            if real_path != results.to_csv(real_path, index=False):
                 print(f"Real alignment results saved to {real_path}")
         
         return results
