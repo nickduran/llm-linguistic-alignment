@@ -1,7 +1,6 @@
 import sys
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Add the parent directory to sys.path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,7 +10,7 @@ from my_package.surrogates import SurrogateGenerator, SurrogateAlignment
 
 # Define path to data folder - adjust paths as needed for your environment
 data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                        "my_package", "data", "prepped_stan")
+                        "my_package", "data", "prepped_stan_mid")
 output_folder = "tests/results"
 
 # Make sure root output directory exists
@@ -25,8 +24,15 @@ dyad_label = "ASU-"
 
 # Initialize analyzer with the desired embedding model
 # Choose one: "bert", "word2vec", or "lexsyn"
-embedding_model = "lexsyn"  # Change this as needed
-analyzer = SemanticAlignment(embedding_model=embedding_model)
+embedding_model = "word2vec"  # Change this as needed
+
+# Create cache directory for Word2Vec
+if embedding_model == "word2vec":
+    cache_dir = os.path.join(output_folder, "word2vec", "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    analyzer = SemanticAlignment(embedding_model=embedding_model, cache_dir=cache_dir)
+else:
+    analyzer = SemanticAlignment(embedding_model=embedding_model)
 
 # Configure parameters for all types of embedding models
 # These will be used as needed based on the embedding model type
