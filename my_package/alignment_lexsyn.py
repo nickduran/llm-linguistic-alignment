@@ -269,9 +269,6 @@ class LexicalSyntacticAlignment:
                 if pos_cols:
                     results['syntactic_master_cosine'] = np.mean([results[col] for col in pos_cols])
                 
-                if lexical_cols and pos_cols:
-                    results['lexsyn_master_cosine'] = np.mean([results[col] for col in lexical_cols + pos_cols])
-                
                 alignment_data.append(results)
             
             # Convert results to DataFrame
@@ -301,10 +298,7 @@ class LexicalSyntacticAlignment:
             
             # Reorder the DataFrame
             df_results = df_results[existing_cols]
-            
-            # Rename the columns
-            df_results = df_results.rename(columns={'lexsyn_master_cosine': f"{self.model_name}_cosine_similarity"})
-        
+
             return df_results
         
         except Exception as e:
