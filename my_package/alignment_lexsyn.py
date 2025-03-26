@@ -199,17 +199,33 @@ class LexicalSyntacticAlignment:
                 results['source_file'] = os.path.basename(file_path)
                 results['lag'] = lag
                 
+                # Add participant if available
+                if 'participant' in row:
+                    results['participant'] = row['participant']
+                
+                # Add original content and token data if available
+                for col in ['content', 'token', 'lemma', 'tagged_token', 'tagged_lemma']:
+                    if col in row:
+                        results[col] = row[col]
+                
+                # Add Stanford tags if available and requested
+                if add_stanford_tags:
+                    for col in ['tagged_stan_token', 'tagged_stan_lemma']:
+                        if col in row:
+                            results[col] = row[col]
+                
                 # Add utterance order if available
                 if 'utter_order' in row:
                     results['utter_order'] = row['utter_order']
                 
+                # Add lagged content
+                for col in ['content1', 'content2']:
+                    if col in row:
+                        results[col] = row[col]
+                
                 # Add utterance lengths
                 results['utterance_length1'] = len(row['token1']) if isinstance(row.get('token1'), list) else 0
                 results['utterance_length2'] = len(row['token2']) if isinstance(row.get('token2'), list) else 0
-                
-                # Optionally include the actual utterance content
-                results['content1'] = row.get('content1', '')
-                results['content2'] = row.get('content2', '')
                 
                 # Calculate n-gram similarities for multiple n-gram sizes
                 for n in range(1, max_ngram + 1):
@@ -260,8 +276,12 @@ class LexicalSyntacticAlignment:
                             results[f'stan_pos_lem{n}_cosine'] = self.get_cosine_similarity(stan_lem1_count, stan_lem2_count)
                 
                 # Calculate composite scores
+                # Lexical gets all n-grams (n=1 and above)
                 lexical_cols = [col for col in results.keys() if col.startswith('lexical_') and col.endswith('_cosine')]
-                pos_cols = [col for col in results.keys() if (col.startswith('pos_') or col.startswith('stan_pos_')) and col.endswith('_cosine')]
+                
+                # Syntactic POS only uses n-grams of length 2 and above
+                pos_cols = [col for col in results.keys() if (col.startswith('pos_') or col.startswith('stan_pos_')) 
+                        and col.endswith('_cosine') and not (col.endswith('1_cosine'))]
                 
                 if lexical_cols:
                     results['lexical_master_cosine'] = np.mean([results[col] for col in lexical_cols])
@@ -277,30 +297,56 @@ class LexicalSyntacticAlignment:
             if df_results.empty:
                 return pd.DataFrame()
             
-            # Ensure consistent column order
-            # First: basic metadata
-            first_cols = ['time', 'source_file', 'lag', 'utter_order']
+            # Define column order based on specifications
+            column_order = [
+                'time', 'source_file', 'participant', 'content', 'token', 'lemma', 
+                'tagged_token', 'tagged_lemma'
+            ]
             
-            # Then: all similarity metrics
-            similarity_cols = [col for col in df_results.columns if '_cosine' in col and col not in first_cols]
+            # Add Stanford tags if available
+            if add_stanford_tags:
+                column_order.extend(['tagged_stan_token', 'tagged_stan_lemma'])
             
-            # Last: additional info
-            last_cols = ['utterance_length1', 'utterance_length2', 'content1', 'content2']
+            # Continue with the rest of the columns
+            column_order.extend([
+                'lag', 'utter_order', 'content1', 'content2', 
+                'utterance_length1', 'utterance_length2'
+            ])
             
-            # Create final column order (only for columns that exist)
-            all_cols = first_cols + similarity_cols + last_cols
-            existing_cols = [col for col in all_cols if col in df_results.columns]
+            # Add n-gram metrics in order
+            for n in range(1, max_ngram + 1):
+                # Lexical metrics
+                column_order.extend([
+                    f'lexical_tok{n}_cosine', f'lexical_lem{n}_cosine'
+                ])
+                
+                # POS metrics
+                column_order.extend([
+                    f'pos_tok{n}_cosine', f'pos_lem{n}_cosine'
+                ])
+                
+                # Stanford POS metrics if available
+                if add_stanford_tags:
+                    column_order.extend([
+                        f'stan_pos_tok{n}_cosine', f'stan_pos_lem{n}_cosine'
+                    ])
             
-            # Add any columns that might not be in our predefined order
+            # Add master metrics at the end
+            column_order.extend(['lexical_master_cosine', 'syntactic_master_cosine'])
+            
+            # Filter to only include columns that exist in the dataframe
+            final_column_order = [col for col in column_order if col in df_results.columns]
+            
+            # Add any remaining columns not in our predefined order
             for col in df_results.columns:
-                if col not in existing_cols:
-                    existing_cols.append(col)
+                if col not in final_column_order:
+                    final_column_order.append(col)
             
-            # Reorder the DataFrame
-            df_results = df_results[existing_cols]
-
+            # Reorder the dataframe
+            df_results = df_results[final_column_order]
+            
             return df_results
-        
+            
         except Exception as e:
             print(f"Error processing file {file_path}: {str(e)}")
             import traceback
