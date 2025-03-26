@@ -1,0 +1,3 @@
+original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
+1	PB:	green apple	['green', 'apple']	['green', 'apple']	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	ASU-T68_ExpBlock2-GreenApple.txt	ASU-T68-ASU-T80-ExpBlock2-GreenApple.txt
+1	PD:	silver is good	['silver', 'is', 'good']	['silver', 'be', 'good']	[('silver', 'NN'), ('is', 'VBZ'), ('good', 'JJ')]	[('silver', 'RB'), ('be', 'VB'), ('good', 'JJ')]	[('silver', 'NN'), ('is', 'VBZ'), ('good', 'JJ')]	[('silver', 'NN'), ('be', 'VB'), ('good', 'JJ')]	ASU-T80_ExpBlock2-GreenApple.txt	ASU-T68-ASU-T80-ExpBlock2-GreenApple.txt

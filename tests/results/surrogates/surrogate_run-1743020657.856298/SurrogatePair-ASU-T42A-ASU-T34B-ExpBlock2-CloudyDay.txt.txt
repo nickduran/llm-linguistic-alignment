@@ -1,0 +1,3 @@
+original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
+1	PB:	that one  	['that', 'one']	['that', 'one']	[('that', 'DT'), ('one', 'CD')]	[('that', 'DT'), ('one', 'CD')]	[('that', 'IN'), ('one', 'CD')]	[('that', 'IN'), ('one', 'CD')]	ASU-T42_ExpBlock2-CloudyDay.txt	ASU-T42-ASU-T34-ExpBlock2-CloudyDay.txt
+0	PC:	  okay no	['okay', 'no']	['okay', 'no']	[('okay', 'NN'), ('no', 'DT')]	[('okay', 'NN'), ('no', 'DT')]	[('okay', 'JJ'), ('no', 'DT')]	[('okay', 'JJ'), ('no', 'DT')]	ASU-T34_ExpBlock2-CloudyDay.txt	ASU-T42-ASU-T34-ExpBlock2-CloudyDay.txt

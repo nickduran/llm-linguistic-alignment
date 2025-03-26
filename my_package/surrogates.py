@@ -23,12 +23,12 @@ class SurrogateGenerator:
         self.output_directory = output_directory or "surrogate_data"
     
     def generate_surrogates(self, 
-                           original_conversation_list,
-                           all_surrogates=True,
-                           keep_original_turn_order=True,
-                           id_separator='\-',
-                           dyad_label='dyad',
-                           condition_label='cond'):
+                        original_conversation_list,
+                        all_surrogates=True,
+                        keep_original_turn_order=True,
+                        id_separator='\-',
+                        dyad_label='dyad',
+                        condition_label='cond'):
         """
         Create transcripts for surrogate pairs of participants who did not
         genuinely interact with each other.
@@ -51,110 +51,227 @@ class SurrogateGenerator:
         # Extract filenames without extensions
         file_info = [re.sub('\.txt','', os.path.basename(file_name)) for file_name in original_conversation_list]
         
-        # Validate filenames
-        if not all(dyad_label in name and condition_label in name and re.search(id_separator.strip("\\"), name) 
-                  for name in file_info):
-            raise ValueError(f"Filenames must include '{dyad_label}', '{condition_label}', and '{id_separator}'")
+        # Check filenames and filter to valid ones only
+        valid_files = []
+        problematic_files = []
+        
+        for i, file_name in enumerate(original_conversation_list):
+            basename = os.path.basename(file_name)
+            info = file_info[i]
+            
+            # Check if the filename has all required components
+            has_dyad = dyad_label in info
+            has_condition = condition_label in info
+            has_separator = re.search(id_separator.strip("\\"), info) is not None
+            
+            if has_dyad and has_condition and has_separator:
+                valid_files.append(file_name)
+            else:
+                problematic_files.append({
+                    'file': basename,
+                    'has_dyad': has_dyad,
+                    'has_condition': has_condition,
+                    'has_separator': has_separator
+                })
+        
+        # Report on problematic files
+        if problematic_files:
+            print(f"WARNING: {len(problematic_files)} files have invalid naming patterns and will be skipped:")
+            for i, file_info in enumerate(problematic_files[:5]):  # Show up to 5 examples
+                print(f"  {i+1}. {file_info['file']} - Missing: " + 
+                    (f"'{dyad_label}' " if not file_info['has_dyad'] else "") +
+                    (f"'{condition_label}' " if not file_info['has_condition'] else "") +
+                    (f"'{id_separator}' " if not file_info['has_separator'] else ""))
+            if len(problematic_files) > 5:
+                print(f"  ... and {len(problematic_files) - 5} more")
+        
+        # Check if we have enough valid files
+        if len(valid_files) < 2:
+            raise ValueError(f"Not enough valid files to generate surrogates. Found only {len(valid_files)} valid files.")
+        
+        print(f"Found {len(valid_files)} valid files for surrogate generation")
         
         # Group files by condition
-        condition_ids = list(set([re.findall(f'[^{id_separator}]*{condition_label}.*', metadata)[0] 
-                                for metadata in file_info]))
+        try:
+            condition_pattern = f'[^{id_separator}]*{condition_label}[^{id_separator}]*'
+            condition_ids = set()
+            for file_name in valid_files:
+                base_name = os.path.basename(file_name)
+                matches = re.findall(condition_pattern, base_name)
+                if matches:
+                    condition_ids.add(matches[0])
+        except Exception as e:
+            print(f"Error extracting condition IDs: {e}")
+            print(f"Pattern used: {condition_pattern}")
+            print(f"Example filename: {os.path.basename(valid_files[0])}")
+            raise ValueError("Could not extract condition IDs from filenames. Check your id_separator and condition_label parameters.")
+        
+        condition_ids = list(condition_ids)
         files_conditions = {}
         for unique_condition in condition_ids:
-            next_condition_files = [add_file for add_file in original_conversation_list 
-                                   if unique_condition in add_file]
+            next_condition_files = [add_file for add_file in valid_files 
+                                if unique_condition in os.path.basename(add_file)]
             files_conditions[unique_condition] = next_condition_files
+        
+        # Generate surrogate pairs for each condition
+        surrogate_files_created = []
         
         # Process each condition
         for condition in list(files_conditions.keys()):
+            condition_files = files_conditions[condition]
+            print(f"Processing condition '{condition}' with {len(condition_files)} files")
+            
+            # Skip if fewer than 2 files in this condition
+            if len(condition_files) < 2:
+                print(f"  Skipping condition '{condition}' - not enough files")
+                continue
+            
             # Get all possible pairings or a subset
             if all_surrogates:
-                paired_surrogates = list(combinations(files_conditions[condition], 2))
+                paired_surrogates = list(combinations(condition_files, 2))
             else:
                 # Sample approximately half as many surrogate pairs as original conversations
                 import math
-                num_surrogates = int(math.ceil(len(files_conditions[condition])/2))
-                all_possible_pairs = list(combinations(files_conditions[condition], 2))
+                num_surrogates = int(math.ceil(len(condition_files)/2))
+                all_possible_pairs = list(combinations(condition_files, 2))
                 paired_surrogates = random.sample(all_possible_pairs, 
-                                                 min(num_surrogates, len(all_possible_pairs)))
+                                                min(num_surrogates, len(all_possible_pairs)))
+            
+            print(f"  Generating {len(paired_surrogates)} surrogate pairs")
             
             # Process each surrogate pairing
             for next_surrogate in paired_surrogates:
-                # Read original files
-                original_file1 = os.path.basename(next_surrogate[0])
-                original_file2 = os.path.basename(next_surrogate[1])
-                original_df1 = pd.read_csv(next_surrogate[0], sep='\t', encoding='utf-8')
-                original_df2 = pd.read_csv(next_surrogate[1], sep='\t', encoding='utf-8')
-                
-                # Validate dataframes
-                if len(original_df1) < 1 or len(original_df2) < 1:
-                    print(f"Skipping empty files: {original_file1} or {original_file2}")
+                try:
+                    # Read original files
+                    original_file1 = os.path.basename(next_surrogate[0])
+                    original_file2 = os.path.basename(next_surrogate[1])
+                    original_df1 = pd.read_csv(next_surrogate[0], sep='\t', encoding='utf-8')
+                    original_df2 = pd.read_csv(next_surrogate[1], sep='\t', encoding='utf-8')
+                    
+                    # Validate dataframes
+                    if len(original_df1) < 1 or len(original_df2) < 1:
+                        print(f"  Skipping empty files: {original_file1} or {original_file2}")
+                        continue
+                    
+                    # Extract dyad IDs
+                    dyad_pattern = f'{dyad_label}[^{id_separator}]*'
+                    try:
+                        original_dyad1 = re.findall(dyad_pattern, original_file1)[0]
+                        original_dyad2 = re.findall(dyad_pattern, original_file2)[0]
+                    except IndexError:
+                        print(f"  Could not extract dyad IDs from {original_file1} or {original_file2}")
+                        print(f"  Pattern used: {dyad_pattern}")
+                        continue
+                    
+                    # Check if participant column exists
+                    if 'participant' not in original_df1.columns or 'participant' not in original_df2.columns:
+                        print(f"  Missing 'participant' column in {original_file1} or {original_file2}")
+                        continue
+                    
+                    # Get all unique participants from each file
+                    participants1 = sorted(original_df1['participant'].unique())
+                    participants2 = sorted(original_df2['participant'].unique())
+                    
+                    # Skip if either file has no participants
+                    if len(participants1) == 0 or len(participants2) == 0:
+                        print(f"  Skipping files with no participants: {original_file1} or {original_file2}")
+                        continue
+                    
+                    # Determine how many participants to use (minimum of the two files)
+                    num_participants = min(len(participants1), len(participants2))
+                    print(f"  Found {len(participants1)} participants in file 1 and {len(participants2)} in file 2")
+                    print(f"  Using {num_participants} participants for surrogate generation")
+                    
+                    # Create two surrogate conversation datasets
+                    # First surrogate: Take participants from file1 and file2 alternating
+                    surrogate_X_participants = []
+                    for i in range(num_participants):
+                        # Get participant from file 1
+                        participant_df1 = original_df1[original_df1['participant'] == participants1[i]].reset_index()
+                        participant_df1 = participant_df1.rename(columns={'file': 'original_file'})
+                        
+                        # Get participant from file 2
+                        participant_df2 = original_df2[original_df2['participant'] == participants2[i]].reset_index()
+                        participant_df2 = participant_df2.rename(columns={'file': 'original_file'})
+                        
+                        # Add to list of dataframes for this surrogate
+                        surrogate_X_participants.append((participant_df1, participant_df2))
+                    
+                    # Second surrogate: Reverse the pairing
+                    surrogate_Y_participants = []
+                    for i in range(num_participants):
+                        # Get participant from file 2
+                        participant_df2 = original_df2[original_df2['participant'] == participants2[i]].reset_index()
+                        participant_df2 = participant_df2.rename(columns={'file': 'original_file'})
+                        
+                        # Get participant from file 1  
+                        participant_df1 = original_df1[original_df1['participant'] == participants1[i]].reset_index()
+                        participant_df1 = participant_df1.rename(columns={'file': 'original_file'})
+                        
+                        # Add to list of dataframes for this surrogate
+                        surrogate_Y_participants.append((participant_df2, participant_df1))
+                    
+                    # Process each surrogate conversation
+                    for surrogate_idx, surrogate_participants in enumerate([surrogate_X_participants, surrogate_Y_participants]):
+                        # Find minimum number of turns per participant
+                        min_turns = float('inf')
+                        for participant_pair in surrogate_participants:
+                            min_turns = min(min_turns, len(participant_pair[0]), len(participant_pair[1]))
+                        
+                        if min_turns == float('inf') or min_turns == 0:
+                            print(f"  Skipping surrogate {surrogate_idx+1}: no valid turns")
+                            continue
+                        
+                        # Truncate each participant's turns to the minimum
+                        truncated_participants = []
+                        for participant_pair in surrogate_participants:
+                            df1_trunc = participant_pair[0].truncate(after=min_turns-1, copy=True)
+                            df2_trunc = participant_pair[1].truncate(after=min_turns-1, copy=True)
+                            
+                            # Optionally shuffle turns if requested
+                            if not keep_original_turn_order:
+                                df1_trunc = df1_trunc.sample(frac=1).reset_index(drop=True)
+                                df2_trunc = df2_trunc.sample(frac=1).reset_index(drop=True)
+                            
+                            truncated_participants.append((df1_trunc, df2_trunc))
+                        
+                        # Combine all participants' turns
+                        all_dfs = []
+                        for pair in truncated_participants:
+                            all_dfs.extend([pair[0], pair[1]])
+                        
+                        # Sort by index to interleave participants' turns
+                        surrogate_df = pd.concat(all_dfs).sort_index(kind="mergesort").reset_index(drop=True)
+                        surrogate_df = surrogate_df.rename(columns={'index': 'original_index'})
+                        
+                        # Name the surrogate file
+                        if surrogate_idx == 0:
+                            # First surrogate: participants from file1 and file2
+                            surrogate_df['file'] = f"{original_dyad1}-{original_dyad2}-{condition}"
+                            surrogate_name = f"SurrogatePair-{original_dyad1}A-{original_dyad2}B-{condition}.txt"
+                        else:
+                            # Second surrogate: participants from file2 and file1
+                            surrogate_df['file'] = f"{original_dyad2}-{original_dyad1}-{condition}"
+                            surrogate_name = f"SurrogatePair-{original_dyad2}A-{original_dyad1}B-{condition}.txt"
+                        
+                        # Save surrogate file
+                        surrogate_path = os.path.join(new_surrogate_path, surrogate_name)
+                        surrogate_df.to_csv(surrogate_path, encoding='utf-8', index=False, sep='\t')
+                        surrogate_files_created.append(surrogate_path)
+                        print(f"  Created surrogate file: {surrogate_name}")
+                    
+                except Exception as e:
+                    print(f"  Error processing surrogate pair: {e}")
+                    import traceback
+                    traceback.print_exc()
                     continue
-                
-                # Get participants from df1
-                participantA_1_code = min(original_df1['participant'].unique())
-                participantB_1_code = max(original_df1['participant'].unique())
-                participantA_1 = original_df1[original_df1['participant'] == participantA_1_code].reset_index()
-                participantA_1 = participantA_1.rename(columns={'file': 'original_file'})
-                participantB_1 = original_df1[original_df1['participant'] == participantB_1_code].reset_index()
-                participantB_1 = participantB_1.rename(columns={'file': 'original_file'})
-                
-                # Get participants from df2
-                participantA_2_code = min(original_df2['participant'].unique())
-                participantB_2_code = max(original_df2['participant'].unique())
-                participantA_2 = original_df2[original_df2['participant'] == participantA_2_code].reset_index()
-                participantA_2 = participantA_2.rename(columns={'file': 'original_file'})
-                participantB_2 = original_df2[original_df2['participant'] == participantB_2_code].reset_index()
-                participantB_2 = participantB_2.rename(columns={'file': 'original_file'})
-                
-                # Determine truncation points
-                surrogateX_turns = min(len(participantA_1), len(participantB_2))
-                surrogateY_turns = min(len(participantA_2), len(participantB_1))
-                
-                # Create surrogate pairs
-                if keep_original_turn_order:
-                    # Preserve original turn ordering
-                    surrogateX_A1 = participantA_1.truncate(after=surrogateX_turns-1, copy=True)
-                    surrogateX_B2 = participantB_2.truncate(after=surrogateX_turns-1, copy=True)
-                    surrogateX = pd.concat([surrogateX_A1, surrogateX_B2]).sort_index(
-                        kind="mergesort").reset_index(drop=True).rename(
-                        columns={'index': 'original_index'})
-                    
-                    surrogateY_A2 = participantA_2.truncate(after=surrogateY_turns-1, copy=True)
-                    surrogateY_B1 = participantB_1.truncate(after=surrogateY_turns-1, copy=True)
-                    surrogateY = pd.concat([surrogateY_A2, surrogateY_B1]).sort_index(
-                        kind="mergesort").reset_index(drop=True).rename(
-                        columns={'index': 'original_index'})
-                else:
-                    # Shuffle turns within participants
-                    surrogateX_A1 = participantA_1.truncate(after=surrogateX_turns-1, copy=True).sample(frac=1).reset_index(drop=True)
-                    surrogateX_B2 = participantB_2.truncate(after=surrogateX_turns-1, copy=True).sample(frac=1).reset_index(drop=True)
-                    surrogateX = pd.concat([surrogateX_A1, surrogateX_B2]).sort_index(
-                        kind="mergesort").reset_index(drop=True).rename(
-                        columns={'index': 'original_index'})
-                    
-                    surrogateY_A2 = participantA_2.truncate(after=surrogateY_turns-1, copy=True).sample(frac=1).reset_index(drop=True)
-                    surrogateY_B1 = participantB_1.truncate(after=surrogateY_turns-1, copy=True).sample(frac=1).reset_index(drop=True)
-                    surrogateY = pd.concat([surrogateY_A2, surrogateY_B1]).sort_index(
-                        kind="mergesort").reset_index(drop=True).rename(
-                        columns={'index': 'original_index'})
-                
-                # Set filenames for surrogate pairs
-                original_dyad1 = re.findall(f'{dyad_label}[^{id_separator}]*', original_file1)[0]
-                original_dyad2 = re.findall(f'{dyad_label}[^{id_separator}]*', original_file2)[0]
-                surrogateX['file'] = f"{original_dyad1}-{original_dyad2}-{condition}"
-                surrogateY['file'] = f"{original_dyad2}-{original_dyad1}-{condition}"
-                nameX = f"SurrogatePair-{original_dyad1}A-{original_dyad2}B-{condition}.txt"
-                nameY = f"SurrogatePair-{original_dyad2}A-{original_dyad1}B-{condition}.txt"
-                
-                # Save surrogate files
-                surrogateX.to_csv(os.path.join(new_surrogate_path, nameX), encoding='utf-8', index=False, sep='\t')
-                surrogateY.to_csv(os.path.join(new_surrogate_path, nameY), encoding='utf-8', index=False, sep='\t')
-                
-                print(f"Created surrogate pairs: {nameX} and {nameY}")
         
-        # Return list of all surrogate files
-        return glob.glob(os.path.join(new_surrogate_path, "*.txt"))
+        num_created = len(surrogate_files_created)
+        if num_created > 0:
+            print(f"Successfully created {num_created} surrogate files")
+            return surrogate_files_created
+        else:
+            raise ValueError("Failed to create any surrogate files. Check the logs for details.")
 
 
 class SurrogateAlignment:

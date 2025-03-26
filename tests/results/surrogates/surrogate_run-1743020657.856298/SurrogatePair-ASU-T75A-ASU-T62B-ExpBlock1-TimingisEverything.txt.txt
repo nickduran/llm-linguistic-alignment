@@ -1,0 +1,3 @@
+original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
+2	PA:	timing is everything	['timing', 'is', 'everything']	['timing', 'be', 'everything']	[('timing', 'NN'), ('is', 'VBZ'), ('everything', 'NN')]	[('timing', 'VBG'), ('be', 'VB'), ('everything', 'NN')]	[('timing', 'NN'), ('is', 'VBZ'), ('everything', 'NN')]	[('timing', 'NN'), ('be', 'VB'), ('everything', 'NN')]	ASU-T75_ExpBlock1-TimingisEverything.txt	ASU-T75-ASU-T62-ExpBlock1-TimingisEverything.txt
+8	PC:	do it	['do', 'it']	['do', 'it']	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	ASU-T62_ExpBlock1-TimingisEverything.txt	ASU-T75-ASU-T62-ExpBlock1-TimingisEverything.txt

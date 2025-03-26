@@ -1,0 +1,3 @@
+original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
+8	PA:	yeah its	['yeah', 'its']	['yeah', 'it']	[('yeah', 'NN'), ('its', 'PRP$')]	[('yeah', 'NN'), ('it', 'PRP')]	[('yeah', 'VB'), ('its', 'PRP$')]	[('yeah', 'VB'), ('it', 'PRP')]	ASU-T75_ExpBlock2-UphillBattle.txt	ASU-T75-ASU-T70-ExpBlock2-UphillBattle.txt
+0	PB:	yeah yay	['yeah', 'may']	['yeah', 'may']	[('yeah', 'NN'), ('may', 'MD')]	[('yeah', 'NN'), ('may', 'MD')]	[('yeah', 'NN'), ('may', 'MD')]	[('yeah', 'NN'), ('may', 'MD')]	ASU-T70_ExpBlock2-UphillBattle.txt	ASU-T75-ASU-T70-ExpBlock2-UphillBattle.txt
