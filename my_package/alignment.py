@@ -30,14 +30,14 @@ class SemanticAlignment:
             raise ValueError(f"Unsupported embedding model: {embedding_model}. Use 'bert', 'word2vec', or 'lexsyn'.")
     
     def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
-                       high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True, max_ngram=2, 
-                       ignore_duplicates=True, add_stanford_tags=False, **kwargs):
+                    high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True, max_ngram=2, 
+                    ignore_duplicates=True, add_stanford_tags=False, **kwargs):
         """
         Analyze alignment for all text files in a folder
         
         Args:
             folder_path: Path to folder containing text files
-            output_directory: Directory to save results (optional)
+            output_directory: Root directory to save results (optional)
             file_pattern: Pattern to match text files (default: "*.txt")
             lag: Number of turns to lag when pairing utterances (default: 1)
             high_sd_cutoff: Standard deviation cutoff for high-frequency words (Word2Vec only)
@@ -51,20 +51,30 @@ class SemanticAlignment:
         Returns:
             pd.DataFrame: Concatenated results for all files
         """
+        # If output directory is provided, ensure model-specific directory exists
+        if output_directory:
+            model_dir = os.path.join(output_directory, self.embedding_model)
+            os.makedirs(model_dir, exist_ok=True)
+        else:
+            model_dir = None
+        
+        # Process files with the appropriate analyzer
+        results = None
+        
         if self.embedding_model == "bert":
             # BERT implementation
-            return self.analyzer.analyze_folder(
+            results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
-                output_directory=output_directory,
+                output_directory=model_dir,  # Use model-specific directory
                 file_pattern=file_pattern,
                 lag=lag,
                 **kwargs
             )
         elif self.embedding_model == "word2vec":
             # Word2Vec implementation
-            return self.analyzer.analyze_folder(
+            results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
-                output_directory=output_directory,
+                output_directory=model_dir,  # Use model-specific directory
                 file_pattern=file_pattern,
                 lag=lag,
                 high_sd_cutoff=high_sd_cutoff,
@@ -74,9 +84,9 @@ class SemanticAlignment:
             )
         elif self.embedding_model == "lexsyn":
             # LexSyn implementation
-            return self.analyzer.analyze_folder(
+            results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
-                output_directory=output_directory,
+                output_directory=model_dir,  # Use model-specific directory
                 file_pattern=file_pattern,
                 lag=lag,
                 max_ngram=max_ngram,
@@ -84,6 +94,35 @@ class SemanticAlignment:
                 add_stanford_tags=add_stanford_tags,
                 **kwargs
             )
+        
+        # Optionally save as "real" results to distinguish from baseline
+        if results is not None and not results.empty and model_dir:
+            # Customize filename based on embedding model
+            if self.embedding_model == "lexsyn":
+                dup_str = "noDups" if ignore_duplicates else "withDups"
+                stan_str = "withStan" if add_stanford_tags else "noStan"
+                real_path = os.path.join(
+                    model_dir,
+                    f"real_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
+                )
+            elif self.embedding_model == "bert":
+                real_path = os.path.join(
+                    model_dir,
+                    f"real_alignment_bert_lag{lag}.csv"
+                )
+            elif self.embedding_model == "word2vec":
+                sd_str = f"sd{high_sd_cutoff}"
+                n_str = f"n{low_n_cutoff}"
+                real_path = os.path.join(
+                    model_dir,
+                    f"real_alignment_word2vec_lag{lag}_{sd_str}_{n_str}.csv"
+                )
+            
+            # Save a copy with the "real" prefix if we're using a model-specific directory
+            if real_path != results.to_csv(real_path, index=False)
+                print(f"Real alignment results saved to {real_path}")
+        
+        return results
     
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
                     ignore_duplicates=True, add_stanford_tags=False, **kwargs):

@@ -1,3 +1,16 @@
+
+## Ignore Mac system
+.DS_Store
+
+## local testing files
+sandbox/
+
+## files that are too large
+gensim-data/
+tests/results/word2vec/cache
+.config/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -151,14 +164,3 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-## Ignore Mac system
-.DS_Store
-
-## local testing files
-sandbox/
-
-## files that are too large
-gensim-data/
-tests/results/word2vec/cache
-
-.config/

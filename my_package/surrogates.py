@@ -293,92 +293,113 @@ class SurrogateAlignment:
         self.surrogate_generator = SurrogateGenerator()
     
     def analyze_baseline(self, 
-                            input_files,
-                            output_directory="results",
-                            surrogate_directory=None,
-                            all_surrogates=True,
-                            keep_original_turn_order=True,
-                            id_separator='\-',
-                            condition_label='cond',
-                            dyad_label='dyad',
-                            lag=1,
-                            max_ngram=2,
-                            ignore_duplicates=True,
-                            add_stanford_tags=False,
-                            **kwargs):
-            """
-            Generate surrogate pairs and analyze their alignment as a baseline
+                        input_files,
+                        output_directory="results",
+                        surrogate_directory=None,
+                        all_surrogates=True,
+                        keep_original_turn_order=True,
+                        id_separator='\-',
+                        condition_label='cond',
+                        dyad_label='dyad',
+                        lag=1,
+                        max_ngram=2,
+                        ignore_duplicates=True,
+                        add_stanford_tags=False,
+                        **kwargs):
+        """
+        Generate surrogate pairs and analyze their alignment as a baseline
+        
+        Args:
+            input_files: Path to directory containing conversation files or list of file paths
+            output_directory: Root directory for all results (default: "results")
+            surrogate_directory: Directory to save surrogate files (optional)
+            all_surrogates: Whether to generate all possible surrogate pairings (default: True)
+            keep_original_turn_order: Whether to maintain original turn order (default: True)
+            id_separator: Character separating dyad ID from condition ID (default: '\-')
+            condition_label: String preceding condition ID in filenames (default: 'cond')
+            dyad_label: String preceding dyad ID in filenames (default: 'dyad')
+            lag: Number of turns to lag when analyzing alignment (default: 1)
+            max_ngram: Maximum n-gram size for lexical/syntactic analysis (default: 2)
+            ignore_duplicates: Whether to ignore duplicate n-grams (default: True)
+            add_stanford_tags: Whether to include Stanford POS tags (default: False)
+            **kwargs: Additional arguments for alignment analysis
             
-            Args:
-                input_files: Path to directory containing conversation files or list of file paths
-                output_directory: Directory to save alignment results
-                surrogate_directory: Directory to save surrogate files (optional)
-                all_surrogates: Whether to generate all possible surrogate pairings (default: True)
-                keep_original_turn_order: Whether to maintain original turn order (default: True)
-                id_separator: Character separating dyad ID from condition ID (default: '\-')
-                condition_label: String preceding condition ID in filenames (default: 'cond')
-                dyad_label: String preceding dyad ID in filenames (default: 'dyad')
-                lag: Number of turns to lag when analyzing alignment (default: 1)
-                max_ngram: Maximum n-gram size for lexical/syntactic analysis (default: 2)
-                ignore_duplicates: Whether to ignore duplicate n-grams (default: True)
-                add_stanford_tags: Whether to include Stanford POS tags (default: False)
-                **kwargs: Additional arguments for alignment analysis
-                
-            Returns:
-                pd.DataFrame: Alignment results for surrogate pairs
-            """
-            # Ensure output directories exist
-            os.makedirs(output_directory, exist_ok=True)
-            surrogate_dir = surrogate_directory or os.path.join(output_directory, "surrogates")
-            os.makedirs(surrogate_dir, exist_ok=True)
+        Returns:
+            pd.DataFrame: Alignment results for surrogate pairs
+        """
+        # Ensure root output directory exists
+        os.makedirs(output_directory, exist_ok=True)
+        
+        # Determine embedding model specific directory
+        model_dir = os.path.join(output_directory, self.alignment.embedding_model)
+        os.makedirs(model_dir, exist_ok=True)
+        
+        # Set up surrogate directory
+        surrogate_dir = surrogate_directory or os.path.join(output_directory, "surrogates")
+        os.makedirs(surrogate_dir, exist_ok=True)
+        
+        # Resolve input files
+        if isinstance(input_files, str) and os.path.isdir(input_files):
+            file_list = glob.glob(os.path.join(input_files, "*.txt"))
+        elif isinstance(input_files, list):
+            file_list = input_files
+        else:
+            raise ValueError("input_files must be a directory path or list of file paths")
+        
+        # Generate surrogate conversation pairs
+        print(f"Generating surrogate conversation pairs from {len(file_list)} files...")
+        self.surrogate_generator.output_directory = surrogate_dir
+        surrogate_files = self.surrogate_generator.generate_surrogates(
+            original_conversation_list=file_list,
+            all_surrogates=all_surrogates,
+            keep_original_turn_order=keep_original_turn_order,
+            id_separator=id_separator,
+            dyad_label=dyad_label,
+            condition_label=condition_label
+        )
+        
+        print(f"Generated {len(surrogate_files)} surrogate files")
+        
+        # Run alignment analysis on surrogate pairs - output directly to the model-specific directory
+        print("Running alignment analysis on surrogate pairs...")
+        surrogate_results = self.alignment.analyze_folder(
+            folder_path=os.path.dirname(surrogate_files[0]),  # Directory where surrogates were saved
+            output_directory=model_dir,  # Save directly to the model-specific directory
+            file_pattern="*.txt",
+            lag=lag,
+            max_ngram=max_ngram,
+            ignore_duplicates=ignore_duplicates,
+            add_stanford_tags=add_stanford_tags,
+            **kwargs
+        )
+        
+        # Save results with baseline-specific filename, in the model directory
+        if not surrogate_results.empty:
+            # Create baseline-specific filename
+            dup_str = "noDups" if ignore_duplicates else "withDups"
+            stan_str = "withStan" if add_stanford_tags else "noStan"
             
-            # Resolve input files
-            if isinstance(input_files, str) and os.path.isdir(input_files):
-                file_list = glob.glob(os.path.join(input_files, "*.txt"))
-            elif isinstance(input_files, list):
-                file_list = input_files
-            else:
-                raise ValueError("input_files must be a directory path or list of file paths")
-            
-            # Generate surrogate conversation pairs
-            print(f"Generating surrogate conversation pairs from {len(file_list)} files...")
-            self.surrogate_generator.output_directory = surrogate_dir
-            surrogate_files = self.surrogate_generator.generate_surrogates(
-                original_conversation_list=file_list,
-                all_surrogates=all_surrogates,
-                keep_original_turn_order=keep_original_turn_order,
-                id_separator=id_separator,
-                dyad_label=dyad_label,
-                condition_label=condition_label
-            )
-            
-            print(f"Generated {len(surrogate_files)} surrogate files")
-            
-            # Run alignment analysis on surrogate pairs
-            print("Running alignment analysis on surrogate pairs...")
-            surrogate_results = self.alignment.analyze_folder(
-                folder_path=os.path.dirname(surrogate_files[0]),  # Use the directory where surrogates were saved
-                output_directory=os.path.join(output_directory, "baseline"),
-                file_pattern="*.txt",
-                lag=lag,
-                max_ngram=max_ngram,
-                ignore_duplicates=ignore_duplicates,
-                add_stanford_tags=add_stanford_tags,
-                **kwargs
-            )
-            
-            # Save results with special filename to indicate these are baseline/surrogate results
-            if not surrogate_results.empty:
-                # Create baseline-specific filename
-                dup_str = "noDups" if ignore_duplicates else "withDups"
-                stan_str = "withStan" if add_stanford_tags else "noStan"
+            # Customize filename by embedding model
+            if self.alignment.embedding_model == "lexsyn":
                 baseline_path = os.path.join(
-                    output_directory, 
-                    f"baseline_alignment_{self.alignment.embedding_model}_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
+                    model_dir, 
+                    f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
                 )
-                
-                # Save the results
-                surrogate_results.to_csv(baseline_path, index=False)
-                print(f"Baseline alignment results saved to {baseline_path}")
+            elif self.alignment.embedding_model == "bert":
+                baseline_path = os.path.join(
+                    model_dir, 
+                    f"baseline_alignment_bert_lag{lag}.csv"
+                )
+            elif self.alignment.embedding_model == "word2vec":
+                sd_str = f"sd{kwargs.get('high_sd_cutoff', 3)}"
+                n_str = f"n{kwargs.get('low_n_cutoff', 1)}"
+                baseline_path = os.path.join(
+                    model_dir, 
+                    f"baseline_alignment_word2vec_lag{lag}_{sd_str}_{n_str}.csv"
+                )
             
-            return surrogate_results
+            # Save the results
+            surrogate_results.to_csv(baseline_path, index=False)
+            print(f"Baseline alignment results saved to {baseline_path}")
+        
+        return surrogate_results
