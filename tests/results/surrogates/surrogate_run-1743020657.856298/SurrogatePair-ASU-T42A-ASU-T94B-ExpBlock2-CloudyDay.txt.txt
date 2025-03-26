@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-1	PB:	that one  	['that', 'one']	['that', 'one']	[('that', 'DT'), ('one', 'CD')]	[('that', 'DT'), ('one', 'CD')]	[('that', 'IN'), ('one', 'CD')]	[('that', 'IN'), ('one', 'CD')]	ASU-T42_ExpBlock2-CloudyDay.txt	ASU-T42-ASU-T94-ExpBlock2-CloudyDay.txt
-1	PD:	i got an idea	['i', 'got', 'an', 'idea']	['i', 'get', 'an', 'idea']	[('i', 'NN'), ('got', 'VBD'), ('an', 'DT'), ('idea', 'NN')]	[('i', 'NN'), ('get', 'VBP'), ('an', 'DT'), ('idea', 'NN')]	[('i', 'LS'), ('got', 'VBD'), ('an', 'DT'), ('idea', 'NN')]	[('i', 'LS'), ('get', 'VB'), ('an', 'DT'), ('idea', 'NN')]	ASU-T94_ExpBlock2-CloudyDay.txt	ASU-T42-ASU-T94-ExpBlock2-CloudyDay.txt

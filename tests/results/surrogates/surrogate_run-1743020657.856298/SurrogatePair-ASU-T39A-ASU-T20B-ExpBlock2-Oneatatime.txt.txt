@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-2	PB:	all right	['all', 'right']	['all', 'right']	[('all', 'DT'), ('right', 'NN')]	[('all', 'DT'), ('right', 'NN')]	[('all', 'DT'), ('right', 'NN')]	[('all', 'DT'), ('right', 'NN')]	ASU-T39_ExpBlock2-Oneatatime.txt	ASU-T39-ASU-T20-ExpBlock2-Oneatatime.txt
-1	PC:	where is the	['where', 'is', 'the']	['where', 'be', 'the']	[('where', 'WRB'), ('is', 'VBZ'), ('the', 'DT')]	[('where', 'WRB'), ('be', 'VB'), ('the', 'DT')]	[('where', 'WRB'), ('is', 'VBZ'), ('the', 'DT')]	[('where', 'WRB'), ('be', 'VB'), ('the', 'DT')]	ASU-T20_ExpBlock2-Oneatatime.txt	ASU-T39-ASU-T20-ExpBlock2-Oneatatime.txt

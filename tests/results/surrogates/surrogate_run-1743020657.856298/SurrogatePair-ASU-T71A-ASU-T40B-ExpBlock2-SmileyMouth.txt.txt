@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-2	PB:	got it  	['got', 'it']	['get', 'it']	[('got', 'VBD'), ('it', 'PRP')]	[('get', 'VB'), ('it', 'PRP')]	[('got', 'VBD'), ('it', 'PRP')]	[('get', 'VB'), ('it', 'PRP')]	ASU-T71_ExpBlock2-SmileyMouth.txt	ASU-T71-ASU-T40-ExpBlock2-SmileyMouth.txt
-9	PC:	right here	['right', 'here']	['right', 'here']	[('right', 'RB'), ('here', 'RB')]	[('right', 'RB'), ('here', 'RB')]	[('right', 'RB'), ('here', 'RB')]	[('right', 'RB'), ('here', 'RB')]	ASU-T40_ExpBlock2-SmileyMouth.txt	ASU-T71-ASU-T40-ExpBlock2-SmileyMouth.txt

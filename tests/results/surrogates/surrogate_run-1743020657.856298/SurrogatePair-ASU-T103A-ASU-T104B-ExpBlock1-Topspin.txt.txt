@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-2	PB:	like this	['like', 'this']	['like', 'this']	[('like', 'IN'), ('this', 'DT')]	[('like', 'IN'), ('this', 'DT')]	[('like', 'IN'), ('this', 'DT')]	[('like', 'IN'), ('this', 'DT')]	ASU-T103_ExpBlock1-Topspin.txt	ASU-T103-ASU-T104-ExpBlock1-Topspin.txt
-2	PC:	top spin	['top', 'spin']	['top', 'spin']	[('top', 'JJ'), ('spin', 'NN')]	[('top', 'JJ'), ('spin', 'NN')]	[('top', 'JJ'), ('spin', 'NN')]	[('top', 'JJ'), ('spin', 'NN')]	ASU-T104_ExpBlock1-Topspin.txt	ASU-T103-ASU-T104-ExpBlock1-Topspin.txt

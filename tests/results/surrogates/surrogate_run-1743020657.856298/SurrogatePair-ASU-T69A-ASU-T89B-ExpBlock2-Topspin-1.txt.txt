@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-3	PA:	there you go	['there', 'you', 'go']	['there', 'you', 'go']	[('there', 'RB'), ('you', 'PRP'), ('go', 'VBP')]	[('there', 'RB'), ('you', 'PRP'), ('go', 'VBP')]	[('there', 'RB'), ('you', 'PRP'), ('go', 'VBP')]	[('there', 'RB'), ('you', 'PRP'), ('go', 'VBP')]	ASU-T69_ExpBlock2-Topspin-1.txt	ASU-T69-ASU-T89-ExpBlock2-Topspin-1.txt
-0	PC:	 yup i yup  	['up', 'i', 'up']	['up', 'i', 'up']	[('up', 'RB'), ('i', 'VBZ'), ('up', 'RP')]	[('up', 'RB'), ('i', 'VBZ'), ('up', 'RP')]	[('up', 'IN'), ('i', 'FW'), ('up', 'RP')]	[('up', 'IN'), ('i', 'FW'), ('up', 'RP')]	ASU-T89_ExpBlock2-Topspin-1.txt	ASU-T69-ASU-T89-ExpBlock2-Topspin-1.txt

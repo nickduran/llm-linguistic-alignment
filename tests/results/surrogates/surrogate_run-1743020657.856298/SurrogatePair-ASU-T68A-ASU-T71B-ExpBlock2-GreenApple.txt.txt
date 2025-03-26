@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-1	PB:	green apple	['green', 'apple']	['green', 'apple']	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	ASU-T68_ExpBlock2-GreenApple.txt	ASU-T68-ASU-T71-ExpBlock2-GreenApple.txt
-1	PC:	okay come on	['okay', 'come', 'on']	['okay', 'come', 'on']	[('okay', 'JJ'), ('come', 'NN'), ('on', 'IN')]	[('okay', 'JJ'), ('come', 'NN'), ('on', 'IN')]	[('okay', 'JJ'), ('come', 'VBN'), ('on', 'IN')]	[('okay', 'JJ'), ('come', 'VBN'), ('on', 'IN')]	ASU-T71_ExpBlock2-GreenApple.txt	ASU-T68-ASU-T71-ExpBlock2-GreenApple.txt

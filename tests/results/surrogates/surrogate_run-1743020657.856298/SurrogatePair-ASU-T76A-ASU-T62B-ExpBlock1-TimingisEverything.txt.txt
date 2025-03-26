@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-3	PA:	 my gosh	['my', 'gash']	['my', 'gash']	[('my', 'PRP$'), ('gash', 'NN')]	[('my', 'PRP$'), ('gash', 'NN')]	[('my', 'PRP$'), ('gash', 'NN')]	[('my', 'PRP$'), ('gash', 'NN')]	ASU-T76_ExpBlock1-TimingisEverything.txt	ASU-T76-ASU-T62-ExpBlock1-TimingisEverything.txt
-8	PC:	do it	['do', 'it']	['do', 'it']	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	ASU-T62_ExpBlock1-TimingisEverything.txt	ASU-T76-ASU-T62-ExpBlock1-TimingisEverything.txt

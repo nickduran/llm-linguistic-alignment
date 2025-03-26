@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-1	PB:	green apple	['green', 'apple']	['green', 'apple']	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	[('green', 'JJ'), ('apple', 'NN')]	ASU-T68_ExpBlock2-GreenApple.txt	ASU-T68-ASU-T36-ExpBlock2-GreenApple.txt
-1	PD:	that's weird	['that', 'is', 'weird']	['that', 'be', 'weird']	[('that', 'DT'), ('is', 'VBZ'), ('weird', 'JJ')]	[('that', 'DT'), ('be', 'VB'), ('weird', 'JJ')]	[('that', 'DT'), ('is', 'VBZ'), ('weird', 'JJ')]	[('that', 'IN'), ('be', 'VB'), ('weird', 'JJ')]	ASU-T36_ExpBlock2-GreenApple.txt	ASU-T68-ASU-T36-ExpBlock2-GreenApple.txt

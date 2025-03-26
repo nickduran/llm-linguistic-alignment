@@ -1,3 +1,0 @@
-original_index	participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	original_file	file
-0	PB:	should be good	['should', 'be', 'good']	['should', 'be', 'good']	[('should', 'MD'), ('be', 'VB'), ('good', 'JJ')]	[('should', 'MD'), ('be', 'VB'), ('good', 'JJ')]	[('should', 'MD'), ('be', 'VB'), ('good', 'JJ')]	[('should', 'MD'), ('be', 'VB'), ('good', 'JJ')]	ASU-T86_ExpBlock1-TimingisEverything.txt	ASU-T86-ASU-T62-ExpBlock1-TimingisEverything.txt
-8	PC:	do it	['do', 'it']	['do', 'it']	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	[('do', 'VB'), ('it', 'PRP')]	ASU-T62_ExpBlock1-TimingisEverything.txt	ASU-T86-ASU-T62-ExpBlock1-TimingisEverything.txt
