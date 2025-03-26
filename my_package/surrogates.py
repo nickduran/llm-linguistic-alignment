@@ -280,23 +280,16 @@ class SurrogateAlignment:
     of alignment that would occur by chance.
     """
     
-    def __init__(self, embedding_model="lexsyn", cache_dir=None, model_name=None, token=None):
+    def __init__(self, embedding_model="lexsyn", cache_dir=None):
         """
         Initialize the surrogate alignment analyzer
         
         Args:
             embedding_model: Type of embedding model to use for alignment
             cache_dir: Directory to cache models (optional)
-            model_name: Name of the specific model to use (optional)
-            token: API token for model access (optional)
         """
         from .alignment import SemanticAlignment
-        self.alignment = SemanticAlignment(
-            embedding_model=embedding_model, 
-            model_name=model_name,
-            token=token,
-            cache_dir=cache_dir
-        )
+        self.alignment = SemanticAlignment(embedding_model=embedding_model, cache_dir=cache_dir)
         self.surrogate_generator = SurrogateGenerator()
     
     def analyze_baseline(self, 
