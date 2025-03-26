@@ -3,6 +3,7 @@ import os
 from .alignment_bert import SemanticAlignmentAnalyzer
 from .alignment_w2v import SemanticAlignmentW2V
 from .alignment_lexsyn import LexicalSyntacticAlignment
+from .surrogates import SurrogateAlignment, SurrogateGenerator
 
 class SemanticAlignment:
     def __init__(self, embedding_model="bert", model_name=None, token=None, cache_dir=None):
@@ -51,7 +52,7 @@ class SemanticAlignment:
             pd.DataFrame: Concatenated results for all files
         """
         if self.embedding_model == "bert":
-            # BERT implementation - ignore Word2Vec and LexSyn-specific parameters
+            # BERT implementation
             return self.analyzer.analyze_folder(
                 folder_path=folder_path,
                 output_directory=output_directory,
@@ -60,7 +61,7 @@ class SemanticAlignment:
                 **kwargs
             )
         elif self.embedding_model == "word2vec":
-            # Word2Vec implementation - pass Word2Vec parameters
+            # Word2Vec implementation
             return self.analyzer.analyze_folder(
                 folder_path=folder_path,
                 output_directory=output_directory,
@@ -72,7 +73,7 @@ class SemanticAlignment:
                 **kwargs
             )
         elif self.embedding_model == "lexsyn":
-            # LexSyn implementation - pass LexSyn parameters
+            # LexSyn implementation
             return self.analyzer.analyze_folder(
                 folder_path=folder_path,
                 output_directory=output_directory,
@@ -103,10 +104,10 @@ class SemanticAlignment:
             pd.DataFrame: Processed DataFrame with alignment metrics
         """
         if self.embedding_model == "bert":
-            # BERT implementation - ignore Word2Vec and LexSyn-specific parameters
+            # BERT implementation
             return self.analyzer.process_file(file_path=file_path, lag=lag, **kwargs)
         elif self.embedding_model == "word2vec":
-            # Word2Vec implementation - pass Word2Vec parameters
+            # Word2Vec implementation
             return self.analyzer.process_file(
                 file_path=file_path, 
                 lag=lag, 
@@ -115,7 +116,7 @@ class SemanticAlignment:
                 **kwargs
             )
         elif self.embedding_model == "lexsyn":
-            # LexSyn implementation - pass LexSyn parameters
+            # LexSyn implementation
             return self.analyzer.process_file(
                 file_path=file_path,
                 lag=lag,
@@ -124,3 +125,55 @@ class SemanticAlignment:
                 add_stanford_tags=add_stanford_tags,
                 **kwargs
             )
+    
+    def analyze_baseline(self, input_files, output_directory="results", surrogate_directory=None,
+                        all_surrogates=True, keep_original_turn_order=True, id_separator='\-',
+                        condition_label='cond', dyad_label='dyad', lag=1, max_ngram=2,
+                        high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True,
+                        ignore_duplicates=True, add_stanford_tags=False, **kwargs):
+        """
+        Generate surrogate conversation pairs and analyze their alignment as a baseline
+        
+        Args:
+            input_files: Path to directory containing conversation files or list of file paths
+            output_directory: Directory to save alignment results (default: "results")
+            surrogate_directory: Directory to save surrogate files (optional)
+            all_surrogates: Whether to generate all possible surrogate pairings (default: True)
+            keep_original_turn_order: Whether to maintain original turn order (default: True)
+            id_separator: Character separating dyad ID from condition ID (default: '\-')
+            condition_label: String preceding condition ID in filenames (default: 'cond')
+            dyad_label: String preceding dyad ID in filenames (default: 'dyad')
+            lag: Number of turns to lag when analyzing alignment (default: 1)
+            max_ngram: Maximum n-gram size for lexical/syntactic analysis (default: 2)
+            high_sd_cutoff: Standard deviation cutoff for high-frequency words (Word2Vec only)
+            low_n_cutoff: Minimum frequency cutoff (Word2Vec only)
+            save_vocab: Whether to save vocabulary lists (Word2Vec only)
+            ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
+            add_stanford_tags: Whether to include Stanford POS tags (default: False)
+            **kwargs: Additional arguments for alignment analysis
+            
+        Returns:
+            pd.DataFrame: Baseline alignment results for surrogate pairs
+        """
+        # Create a SurrogateAlignment instance with same embedding model
+        surrogate_aligner = SurrogateAlignment(embedding_model=self.embedding_model)
+        
+        # Pass through all parameters to the surrogate analyzer
+        return surrogate_aligner.analyze_baseline(
+            input_files=input_files,
+            output_directory=output_directory,
+            surrogate_directory=surrogate_directory,
+            all_surrogates=all_surrogates,
+            keep_original_turn_order=keep_original_turn_order,
+            id_separator=id_separator,
+            condition_label=condition_label,
+            dyad_label=dyad_label,
+            lag=lag,
+            max_ngram=max_ngram,
+            high_sd_cutoff=high_sd_cutoff,
+            low_n_cutoff=low_n_cutoff,
+            save_vocab=save_vocab,
+            ignore_duplicates=ignore_duplicates,
+            add_stanford_tags=add_stanford_tags,
+            **kwargs
+        )
