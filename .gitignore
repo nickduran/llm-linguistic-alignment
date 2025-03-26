@@ -7,9 +7,8 @@ sandbox/
 
 ## files that are too large
 gensim-data/
-tests/results/word2vec/cache
 .config/
-
+tests/results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
