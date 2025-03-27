@@ -1,4 +1,4 @@
-# my_package/alignment_w2v.py
+# my_package/alignment_fasttext.py
 import os
 import numpy as np
 import pandas as pd
@@ -7,18 +7,18 @@ import ast
 from collections import Counter
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
-from .fasttext_model import Word2VecWrapper
+from .fasttext_model import FastTextWrapper
 
-class SemanticAlignmentW2V:
-    def __init__(self, model_name="word2vec-google-news-300", cache_dir=None):
+class SemanticAlignmentFastText:
+    def __init__(self, model_name="fasttext-wiki-news-300", cache_dir=None):
         """
-        Initialize the semantic alignment analyzer with Word2Vec
+        Initialize the semantic alignment analyzer with FastText
         
         Args:
-            model_name: Name of the Word2Vec model to use
+            model_name: Name of the FastText model to use
             cache_dir: Directory to cache models (optional)
         """
-        self.w2v_wrapper = Word2VecWrapper(model_name, cache_dir)
+        self.fasttext_wrapper = FastTextWrapper(model_name, cache_dir)
         self.model_name = model_name.split('/')[-1]  # Extract model name for column naming
         self.vocab_all = None  # All vocabulary words
         self.vocab_filtered = None  # Filtered vocabulary words
@@ -113,7 +113,7 @@ class SemanticAlignmentW2V:
     
     def get_embedding(self, tokens):
         """
-        Get Word2Vec embedding for tokens
+        Get FastText embedding for tokens
         
         Args:
             tokens: List of tokens to encode
@@ -131,7 +131,7 @@ class SemanticAlignmentW2V:
         # Create a cache key from the tokens
         cache_key = str(tokens)
             
-        return self.w2v_wrapper.get_text_embedding(tokens, cache_key)
+        return self.fasttext_wrapper.get_text_embedding(tokens, cache_key)
     
     def pair_and_lag_columns(self, df, columns_to_lag, suffix1='1', suffix2='2', lag=1):
         """
@@ -214,9 +214,6 @@ class SemanticAlignmentW2V:
             # Add similarities to DataFrame
             df[similarity_column_name] = similarities
             
-            # # Add debugging
-            # non_null = sum(x is not None for x in similarities)
-            # print(f"Added {non_null} similarity scores to column {similarity_column_name}")
             print(f"Computed {sum(x is not None for x in similarities)} similarity scores for {col_prefix}_{self.model_name}_cosine_similarity")
 
         return df
@@ -286,7 +283,7 @@ class SemanticAlignmentW2V:
             df['lag'] = lag
             
             # Check if model is loaded
-            if self.w2v_wrapper.model is None:
+            if self.fasttext_wrapper.model is None:
                 print(f"WARNING: Model is not loaded. Cannot compute embeddings for {file_path}")
                 print("Will return file with original content but no embeddings or similarity scores")
                 return df
@@ -316,7 +313,7 @@ class SemanticAlignmentW2V:
                             cache_key = f"{idx}_{column}_{row[column]}"
                             
                             # Get embedding with cache
-                            embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
+                            embedding = self.fasttext_wrapper.get_text_embedding(tokens, cache_key)
                             
                             # Store the embedding if we got one
                             if embedding is not None:
@@ -349,7 +346,7 @@ class SemanticAlignmentW2V:
                             
                             # Get the embedding
                             cache_key = f"{idx}_{column}_{str(tokens)}"
-                            embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
+                            embedding = self.fasttext_wrapper.get_text_embedding(tokens, cache_key)
                             
                             # Store the embedding
                             if embedding is not None:
@@ -382,7 +379,7 @@ class SemanticAlignmentW2V:
                             
                             # Get the embedding
                             cache_key = f"{idx}_{column}_{str(tokens)}"
-                            embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
+                            embedding = self.fasttext_wrapper.get_text_embedding(tokens, cache_key)
                             
                             # Store the embedding
                             if embedding is not None:
@@ -437,10 +434,8 @@ class SemanticAlignmentW2V:
             columns_to_drop = ['tagged_token', 'tagged_lemma', 'tagged_stan_token', 'tagged_stan_lemma', 'file']
             df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
             
-            # Reorder columns (your existing ordering code)
-            
             # Save embedding cache
-            self.w2v_wrapper.save_embedding_cache()
+            self.fasttext_wrapper.save_embedding_cache()
             
             return df
         
@@ -450,7 +445,6 @@ class SemanticAlignmentW2V:
             traceback.print_exc()  # Print the full stack trace for debugging
             return pd.DataFrame()  # Return empty dataframe on error
         
-
     def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
                     high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True):
         """

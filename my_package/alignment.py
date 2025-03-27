@@ -1,7 +1,7 @@
 # my_package/alignment.py
 import os
 from .alignment_bert import SemanticAlignmentAnalyzer
-from .alignment_w2v import SemanticAlignmentW2V
+from .alignment_fasttext import SemanticAlignmentFastText
 from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateAlignment, SurrogateGenerator
 
@@ -11,7 +11,7 @@ class SemanticAlignment:
         Initialize a semantic alignment analyzer with a specified embedding model
         
         Args:
-            embedding_model: Type of embedding model to use ('bert', 'word2vec', or 'lexsyn')
+            embedding_model: Type of embedding model to use ('bert', 'fasttext', or 'lexsyn')
             model_name: Name of the specific model to use (optional)
             token: API token for model access (optional, needed for BERT only)
             cache_dir: Directory to cache models (optional)
@@ -21,13 +21,13 @@ class SemanticAlignment:
         if self.embedding_model == "bert":
             model_name = model_name or "bert-base-uncased"
             self.analyzer = SemanticAlignmentAnalyzer(model_name=model_name, token=token)
-        elif self.embedding_model == "word2vec":
-            model_name = model_name or "word2vec-google-news-300"
-            self.analyzer = SemanticAlignmentW2V(model_name=model_name, cache_dir=cache_dir)
+        elif self.embedding_model == "fasttext":
+            model_name = model_name or "fasttext-wiki-news-300"
+            self.analyzer = SemanticAlignmentFastText(model_name=model_name, cache_dir=cache_dir)
         elif self.embedding_model == "lexsyn":
             self.analyzer = LexicalSyntacticAlignment()
         else:
-            raise ValueError(f"Unsupported embedding model: {embedding_model}. Use 'bert', 'word2vec', or 'lexsyn'.")
+            raise ValueError(f"Unsupported embedding model: {embedding_model}. Use 'bert', 'fasttext', or 'lexsyn'.")
     
     def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
                     high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True, max_ngram=2, 
@@ -40,9 +40,9 @@ class SemanticAlignment:
             output_directory: Root directory to save results (optional)
             file_pattern: Pattern to match text files (default: "*.txt")
             lag: Number of turns to lag when pairing utterances (default: 1)
-            high_sd_cutoff: Standard deviation cutoff for high-frequency words (Word2Vec only)
-            low_n_cutoff: Minimum frequency cutoff (Word2Vec only)
-            save_vocab: Whether to save vocabulary lists (Word2Vec only)
+            high_sd_cutoff: Standard deviation cutoff for high-frequency words (FastText only)
+            low_n_cutoff: Minimum frequency cutoff (FastText only)
+            save_vocab: Whether to save vocabulary lists (FastText only)
             max_ngram: Maximum n-gram size to compute (LexSyn only)
             ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
             add_stanford_tags: Whether to include Stanford POS tags (LexSyn only)
@@ -70,8 +70,8 @@ class SemanticAlignment:
                 lag=lag,
                 **kwargs
             )
-        elif self.embedding_model == "word2vec":
-            # Word2Vec implementation
+        elif self.embedding_model == "fasttext":
+            # FastText implementation
             results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
                 output_directory=model_dir,  # Use model-specific directory
@@ -105,8 +105,8 @@ class SemanticAlignment:
         Args:
             file_path: Path to the file to process
             lag: Number of turns to lag when pairing utterances (default: 1)
-            high_sd_cutoff: Standard deviation cutoff for high-frequency words (Word2Vec only)
-            low_n_cutoff: Minimum frequency cutoff (Word2Vec only)
+            high_sd_cutoff: Standard deviation cutoff for high-frequency words (FastText only)
+            low_n_cutoff: Minimum frequency cutoff (FastText only)
             max_ngram: Maximum n-gram size to compute (LexSyn only)
             ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
             add_stanford_tags: Whether to include Stanford POS tags (LexSyn only)
@@ -118,8 +118,8 @@ class SemanticAlignment:
         if self.embedding_model == "bert":
             # BERT implementation
             return self.analyzer.process_file(file_path=file_path, lag=lag, **kwargs)
-        elif self.embedding_model == "word2vec":
-            # Word2Vec implementation
+        elif self.embedding_model == "fasttext":
+            # FastText implementation
             return self.analyzer.process_file(
                 file_path=file_path, 
                 lag=lag, 
@@ -157,9 +157,9 @@ class SemanticAlignment:
             dyad_label: String preceding dyad ID in filenames (default: 'dyad')
             lag: Number of turns to lag when analyzing alignment (default: 1)
             max_ngram: Maximum n-gram size for lexical/syntactic analysis (default: 2)
-            high_sd_cutoff: Standard deviation cutoff for high-frequency words (Word2Vec only)
-            low_n_cutoff: Minimum frequency cutoff (Word2Vec only)
-            save_vocab: Whether to save vocabulary lists (Word2Vec only)
+            high_sd_cutoff: Standard deviation cutoff for high-frequency words (FastText only)
+            low_n_cutoff: Minimum frequency cutoff (FastText only)
+            save_vocab: Whether to save vocabulary lists (FastText only)
             ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
             add_stanford_tags: Whether to include Stanford POS tags (default: False)
             **kwargs: Additional arguments for alignment analysis
@@ -169,8 +169,8 @@ class SemanticAlignment:
         """
         # Get the cache directory from the current analyzer
         cache_dir = getattr(self.analyzer, 'cache_dir', None)
-        if hasattr(self, 'w2v_wrapper') and hasattr(self.w2v_wrapper, 'cache_dir'):
-            cache_dir = self.w2v_wrapper.cache_dir
+        if hasattr(self.analyzer, 'fasttext_wrapper') and hasattr(self.analyzer.fasttext_wrapper, 'cache_dir'):
+            cache_dir = self.analyzer.fasttext_wrapper.cache_dir
         
         # Create a SurrogateAlignment instance with same embedding model AND cache directory
         surrogate_aligner = SurrogateAlignment(

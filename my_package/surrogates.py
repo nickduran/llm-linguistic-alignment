@@ -388,12 +388,12 @@ class SurrogateAlignment:
                     output_directory, 
                     f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
                 )
-            elif embedding_model == "word2vec":
+            elif embedding_model == "fasttext":
                 sd_str = f"sd{high_sd_cutoff}"
                 n_str = f"n{low_n_cutoff}"
                 baseline_path = os.path.join(
                     output_directory, 
-                    f"baseline_alignment_word2vec_lag{lag}_{sd_str}_{n_str}.csv"
+                    f"baseline_alignment_fasttext_lag{lag}_{sd_str}_{n_str}.csv"
                 )
             
             # Save the results

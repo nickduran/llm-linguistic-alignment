@@ -7,7 +7,7 @@ load_dotenv()
 from .bert_model import BertWrapper
 from .fasttext_model import Word2VecWrapper
 from .alignment_bert import SemanticAlignmentAnalyzer
-from .alignment_w2v import SemanticAlignmentW2V
+from .alignment_fasttext import SemanticAlignmentW2V
 from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateGenerator, SurrogateAlignment
 from .alignment import SemanticAlignment
