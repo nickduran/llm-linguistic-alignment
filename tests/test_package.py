@@ -10,7 +10,7 @@ from my_package.surrogates import SurrogateGenerator, SurrogateAlignment
 
 # Define path to data folder - adjust paths as needed for your environment
 data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                        "my_package", "data", "prepped_stan_small")
+                        "my_package", "data", "prepped_stan_mid")
 output_folder = "tests/results"
 
 # Make sure root output directory exists
@@ -53,33 +53,33 @@ common_params = {
     "lag": 1
 }
 
-# 1. First, analyze the real conversations
-print(f"Analyzing real conversations with {embedding_model} model...")
-real_results = analyzer.analyze_folder(
-    folder_path=data_path,
-    output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
-    **common_params,
-    **w2v_params,
-    **lexsyn_params
-)
-
-# # 2. Next, generate surrogate pairs and analyze them
-# print(f"Generating and analyzing surrogate pairs with {embedding_model} model...")
-# baseline_results = analyzer.analyze_baseline(
-#     input_files=data_path,
+# # 1. First, analyze the real conversations
+# print(f"Analyzing real conversations with {embedding_model} model...")
+# real_results = analyzer.analyze_folder(
+#     folder_path=data_path,
 #     output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
-#     surrogate_directory=os.path.join(output_folder, "surrogates"),
-#     all_surrogates=False,
-#     keep_original_turn_order=True,
-#     # Adjust these to match your actual filename format
-#     id_separator="_",              # The separator between components
-#     condition_label="ExpBlock",    # The string that identifies conditions
-#     dyad_label="ASU-",             # The string that identifies dyads
-#     # Include all other parameters
 #     **common_params,
 #     **w2v_params,
 #     **lexsyn_params
 # )
+
+# 2. Next, generate surrogate pairs and analyze them
+print(f"Generating and analyzing surrogate pairs with {embedding_model} model...")
+baseline_results = analyzer.analyze_baseline(
+    input_files=data_path,
+    output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
+    surrogate_directory=os.path.join(output_folder, "surrogates"),
+    all_surrogates=False,
+    keep_original_turn_order=True,
+    # Adjust these to match your actual filename format
+    id_separator="_",              # The separator between components
+    condition_label="ExpBlock",    # The string that identifies conditions
+    dyad_label="ASU-",             # The string that identifies dyads
+    # Include all other parameters
+    **common_params,
+    **w2v_params,
+    **lexsyn_params
+)
 
 # # 3. If you want to compare results, you now need to find them in the model-specific directory
 # if not real_results.empty and not baseline_results.empty:

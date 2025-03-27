@@ -214,10 +214,11 @@ class SemanticAlignmentW2V:
             # Add similarities to DataFrame
             df[similarity_column_name] = similarities
             
-            # Add debugging
-            non_null = sum(x is not None for x in similarities)
-            print(f"Added {non_null} similarity scores to column {similarity_column_name}")
-        
+            # # Add debugging
+            # non_null = sum(x is not None for x in similarities)
+            # print(f"Added {non_null} similarity scores to column {similarity_column_name}")
+            print(f"Computed {sum(x is not None for x in similarities)} similarity scores for {col_prefix}_{self.model_name}_cosine_similarity")
+
         return df
     
     def convert_list_columns(self, df):
@@ -267,7 +268,7 @@ class SemanticAlignmentW2V:
             # Convert list columns if needed
             df = self.convert_list_columns(df)
             
-            # Pair and lag columns - ensure participant exists
+            # Pair and lag columns
             if 'participant' in df.columns:
                 df = self.pair_and_lag_columns(df, columns_to_lag=['content', 'lemma', 'token'], lag=lag)
             else:
@@ -291,11 +292,13 @@ class SemanticAlignmentW2V:
                 return df
             
             # Compute embeddings
-            print(f"Computing embeddings for {file_path}...")
+            print(f"Computing embeddings for {os.path.basename(file_path)}...")
             content_embedding_columns = []
             token_embedding_columns = []
             lemma_embedding_columns = []
             embedding_count = 0
+            token_embed_count = 0
+            lemma_embed_count = 0
             
             # Process content embeddings
             for column in ["content1", "content2"]:
@@ -315,25 +318,17 @@ class SemanticAlignmentW2V:
                             # Get embedding with cache
                             embedding = self.w2v_wrapper.get_text_embedding(tokens, cache_key)
                             
-                            # Debug print for first few embeddings
+                            # Store the embedding if we got one
                             if embedding is not None:
                                 embedding_count += 1
-                                if embedding_count <= 3:
-                                    print(f"Sample embedding shape: {embedding.shape}")
-                                    print(f"First few values: {embedding[:5]}")
-                                
-                                # Store the embedding
-                                df.at[idx, col_name] = embedding.tolist()  # Store as list for DataFrame compatibility
+                                df.at[idx, col_name] = embedding.tolist()
                                 df.at[idx, f"{col_name}_dims"] = embedding.shape[0]
                     
                     # Add to embeddings columns list if we have any values
                     if df[col_name].notna().any():
                         content_embedding_columns.append(col_name)
             
-            print(f"Total content embeddings computed: {embedding_count}")
-            
             # Process token embeddings
-            token_embed_count = 0
             for suffix in ["1", "2"]:
                 column = f"token{suffix}"
                 if column in df.columns:
@@ -350,7 +345,6 @@ class SemanticAlignmentW2V:
                                 try:
                                     tokens = ast.literal_eval(tokens)
                                 except:
-                                    print(f"Error parsing tokens: {tokens}")
                                     continue
                             
                             # Get the embedding
@@ -367,10 +361,7 @@ class SemanticAlignmentW2V:
                     if df[col_name].notna().any():
                         token_embedding_columns.append(col_name)
             
-            print(f"Total token embeddings computed: {token_embed_count}")
-            
             # Process lemma embeddings
-            lemma_embed_count = 0
             for suffix in ["1", "2"]:
                 column = f"lemma{suffix}"
                 if column in df.columns:
@@ -387,7 +378,6 @@ class SemanticAlignmentW2V:
                                 try:
                                     tokens = ast.literal_eval(tokens)
                                 except:
-                                    print(f"Error parsing tokens: {tokens}")
                                     continue
                             
                             # Get the embedding
@@ -404,39 +394,30 @@ class SemanticAlignmentW2V:
                     if df[col_name].notna().any():
                         lemma_embedding_columns.append(col_name)
             
-            print(f"Total lemma embeddings computed: {lemma_embed_count}")
+            # Summary of embeddings computed
+            embedding_summary = {
+                "content": embedding_count,
+                "token": token_embed_count,
+                "lemma": lemma_embed_count
+            }
+            print(f"Embeddings computed: {embedding_summary}")
             
             # Calculate cosine similarities for each embedding type
             # Content similarities
             if len(content_embedding_columns) >= 2:
                 embedding_pairs = [(content_embedding_columns[0], content_embedding_columns[1])]
-                print(f"Computing content similarities...")
                 df = self.calculate_cosine_similarity(df, embedding_pairs, col_prefix="content")
-                content_sim_col = f"content_{self.model_name}_cosine_similarity"
-                print(f"Computed {df[content_sim_col].notna().sum()} content similarity scores")
-            else:
-                print("Not enough content embeddings to compute similarities")
-                
+                    
             # Token similarities
             if len(token_embedding_columns) >= 2:
                 embedding_pairs = [(token_embedding_columns[0], token_embedding_columns[1])]
-                print(f"Computing token similarities...")
                 df = self.calculate_cosine_similarity(df, embedding_pairs, col_prefix="token")
-                token_sim_col = f"token_{self.model_name}_cosine_similarity"
-                print(f"Computed {df[token_sim_col].notna().sum()} token similarity scores")
-            else:
-                print("Not enough token embeddings to compute similarities")
-                
+                    
             # Lemma similarities
             if len(lemma_embedding_columns) >= 2:
                 embedding_pairs = [(lemma_embedding_columns[0], lemma_embedding_columns[1])]
-                print(f"Computing lemma similarities...")
                 df = self.calculate_cosine_similarity(df, embedding_pairs, col_prefix="lemma")
-                lemma_sim_col = f"lemma_{self.model_name}_cosine_similarity"
-                print(f"Computed {df[lemma_sim_col].notna().sum()} lemma similarity scores")
-            else:
-                print("Not enough lemma embeddings to compute similarities")
-                
+            
             # Calculate master similarity score (average of all similarity scores)
             sim_columns = [
                 f"content_{self.model_name}_cosine_similarity",
@@ -448,43 +429,15 @@ class SemanticAlignmentW2V:
             available_sim_columns = [col for col in sim_columns if col in df.columns]
             
             if available_sim_columns:
-                print(f"Computing master similarity score from {len(available_sim_columns)} metrics...")
-                
                 # Create a new column with the average of available similarity scores
                 df[f"master_{self.model_name}_cosine_similarity"] = df[available_sim_columns].mean(axis=1)
-                print(f"Computed {df[f'master_{self.model_name}_cosine_similarity'].notna().sum()} master similarity scores")
+                print(f"Similarity scores computed for {len(available_sim_columns)} metrics")
             
             # Drop unnecessary columns
             columns_to_drop = ['tagged_token', 'tagged_lemma', 'tagged_stan_token', 'tagged_stan_lemma', 'file']
             df = df.drop(columns=[col for col in columns_to_drop if col in df.columns])
             
-            # Reorder columns
-            desired_column_order = [
-                'source_file', 'participant', 'content', 'token', 'lemma', 'lag', 
-                'content1', 'content2', 'lemma1', 'lemma2', 'token1', 'token2', 'utter_order',
-                'content1_embedding_word2vec-google-news-300', 'content1_embedding_word2vec-google-news-300_dims',
-                'content2_embedding_word2vec-google-news-300', 'content2_embedding_word2vec-google-news-300_dims',
-                'token1_embedding_word2vec-google-news-300', 'token1_embedding_word2vec-google-news-300_dims',
-                'token2_embedding_word2vec-google-news-300', 'token2_embedding_word2vec-google-news-300_dims',
-                'lemma1_embedding_word2vec-google-news-300', 'lemma1_embedding_word2vec-google-news-300_dims',
-                'lemma2_embedding_word2vec-google-news-300', 'lemma2_embedding_word2vec-google-news-300_dims'
-            ]
-            
-            # Add similarity columns to the end
-            for col in df.columns:
-                if 'cosine_similarity' in col:
-                    desired_column_order.append(col)
-            
-            # Only include columns that exist
-            final_column_order = [col for col in desired_column_order if col in df.columns]
-            
-            # Add any remaining columns that might not be in our desired order
-            for col in df.columns:
-                if col not in final_column_order:
-                    final_column_order.append(col)
-            
-            # Reorder the DataFrame
-            df = df[final_column_order]
+            # Reorder columns (your existing ordering code)
             
             # Save embedding cache
             self.w2v_wrapper.save_embedding_cache()
@@ -572,11 +525,13 @@ class SemanticAlignmentW2V:
                 result_df = result_df.rename(columns={col: new_col_name})
                 break
         
-        # Save results if output directory is provided
         if output_directory and not result_df.empty:
-            os.makedirs(output_directory, exist_ok=True)
+            # Remove embedding columns before saving
+            embedding_columns = [col for col in result_df.columns if 'embedding' in col]
+            result_df_to_save = result_df.drop(columns=embedding_columns, errors='ignore')
+            # Save the filtered dataframe
             output_path = os.path.join(output_directory, f"semantic_alignment_{self.model_name}_lag{lag}.csv")
-            result_df.to_csv(output_path, index=False)
+            result_df_to_save.to_csv(output_path, index=False)
             print(f"Results saved to {output_path}")
         
         return result_df

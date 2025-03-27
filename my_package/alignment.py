@@ -118,10 +118,6 @@ class SemanticAlignment:
                     f"real_alignment_word2vec_lag{lag}_{sd_str}_{n_str}.csv"
                 )
             
-            # Save a copy with the "real" prefix if we're using a model-specific directory
-            if real_path != results.to_csv(real_path, index=False):
-                print(f"Real alignment results saved to {real_path}")
-        
         return results
     
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
