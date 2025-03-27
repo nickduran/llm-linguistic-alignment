@@ -5,15 +5,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .bert_model import BertWrapper
-from .fasttext_model import Word2VecWrapper
+from .fasttext_model import FastTextWrapper
 from .alignment_bert import SemanticAlignmentAnalyzer
-from .alignment_fasttext import SemanticAlignmentW2V
+from .alignment_fasttext import SemanticAlignmentFastText
 from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateGenerator, SurrogateAlignment
 from .alignment import SemanticAlignment
 
-__all__ = ['BertWrapper', 'Word2VecWrapper', 'SemanticAlignmentAnalyzer', 
-           'SemanticAlignmentW2V', 'LexicalSyntacticAlignment', 'SemanticAlignment',
+__all__ = ['BertWrapper', 'FastTextWrapper', 'SemanticAlignmentAnalyzer', 
+           'SemanticAlignmentFastText', 'LexicalSyntacticAlignment', 'SemanticAlignment',
            'SurrogateGenerator', 'SurrogateAlignment']
 
 # from .prepare_transcripts import *
