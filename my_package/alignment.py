@@ -172,23 +172,23 @@ class LinguisticAlignment:
         if hasattr(self.analyzer, 'fasttext_wrapper') and hasattr(self.analyzer.fasttext_wrapper, 'cache_dir'):
             cache_dir = self.analyzer.fasttext_wrapper.cache_dir
         
-        # Create a SurrogateAlignment instance with same embedding model AND cache directory
+        # Create a SurrogateAlignment instance with same alignment type AND cache directory
         surrogate_aligner = SurrogateAlignment(
-            embedding_model=self.alignment_type,
-            cache_dir=cache_dir  # Pass the same cache directory
+            alignment_type=self.alignment_type,  # Changed from embedding_model
+            cache_dir=cache_dir
         )
         
-        # Create model-specific output directory if provided
+        # Create alignment-type-specific output directory if provided
         if output_directory:
-            model_dir = os.path.join(output_directory, self.alignment_type)
+            model_dir = os.path.join(output_directory, self.alignment_type)  # Changed from self.embedding_model
             os.makedirs(model_dir, exist_ok=True)
         else:
             model_dir = None
         
-        # Pass through all parameters to the surrogate analyzer, using model-specific directory
+        # Pass through all parameters to the surrogate analyzer, using alignment-type-specific directory
         return surrogate_aligner.analyze_baseline(
             input_files=input_files,
-            output_directory=model_dir,  # Changed to use model-specific directory
+            output_directory=model_dir,
             surrogate_directory=surrogate_directory,
             all_surrogates=all_surrogates,
             keep_original_turn_order=keep_original_turn_order,
