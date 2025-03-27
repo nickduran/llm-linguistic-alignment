@@ -24,7 +24,7 @@ dyad_label = "ASU-"
 
 # Initialize analyzer with the desired alignment type
 # Choose one: "bert", "fasttext", or "lexsyn"
-alignment_type = "fasttext"  # Changed from "word2vec" to "fasttext"
+alignment_type = "bert"  # Changed from "word2vec" to "fasttext"
 
 # Create cache directory for models that need it
 if alignment_type in ["fasttext", "bert"]:
