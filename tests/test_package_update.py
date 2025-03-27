@@ -55,14 +55,14 @@ real_results = analyzer.analyze_folder(
 )
 
 # Analyze baseline
-# baseline_results = analyzer.analyze_baseline(
-#     input_files=data_path,
-#     output_directory=output_folder,
-#     **common_params,
-#     **fasttext_params,
-#     **lexsyn_params,
-#     **surrogate_params  # Add surrogate-specific parameters
-# )
+baseline_results = analyzer.analyze_baseline(
+    input_files=data_path,
+    output_directory=output_folder,
+    **common_params,
+    **fasttext_params,
+    **lexsyn_params,
+    **surrogate_params  # Add surrogate-specific parameters
+)
 
 # # Optional: use existing surrogates
 # alt_baseline = analyzer.analyze_baseline(
