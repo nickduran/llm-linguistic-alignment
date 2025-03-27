@@ -5,7 +5,7 @@ from .alignment_fasttext import SemanticAlignmentFastText
 from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateAlignment, SurrogateGenerator
 
-class SemanticAlignment:
+class LinguisticAlignment:
     def __init__(self, embedding_model="bert", model_name=None, token=None, cache_dir=None):
         """
         Initialize a semantic alignment analyzer with a specified embedding model

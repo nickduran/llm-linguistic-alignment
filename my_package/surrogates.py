@@ -290,8 +290,8 @@ class SurrogateAlignment:
             model_name: Name of the specific model to use (optional)
             token: API token for model access (optional)
         """
-        from .alignment import SemanticAlignment
-        self.alignment = SemanticAlignment(
+        from .alignment import LinguisticAlignment
+        self.alignment = LinguisticAlignment(
             embedding_model=embedding_model, 
             model_name=model_name,
             token=token,

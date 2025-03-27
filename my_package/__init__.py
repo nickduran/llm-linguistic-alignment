@@ -10,10 +10,10 @@ from .alignment_bert import SemanticAlignmentAnalyzer
 from .alignment_fasttext import SemanticAlignmentFastText
 from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateGenerator, SurrogateAlignment
-from .alignment import SemanticAlignment
+from .alignment import LinguisticAlignment
 
 __all__ = ['BertWrapper', 'FastTextWrapper', 'SemanticAlignmentAnalyzer', 
-           'SemanticAlignmentFastText', 'LexicalSyntacticAlignment', 'SemanticAlignment',
+           'SemanticAlignmentFastText', 'LexicalSyntacticAlignment', 'LinguisticAlignment',
            'SurrogateGenerator', 'SurrogateAlignment']
 
 # from .prepare_transcripts import *

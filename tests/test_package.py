@@ -5,7 +5,7 @@ import pandas as pd
 # Add the parent directory to sys.path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from my_package.alignment import SemanticAlignment
+from my_package.alignment import LinguisticAlignment
 from my_package.surrogates import SurrogateGenerator, SurrogateAlignment
 
 # Define path to data folder - adjust paths as needed for your environment
@@ -22,17 +22,17 @@ id_separator = "_"
 condition_label = "ExpBlock"
 dyad_label = "ASU-"
 
-# Initialize analyzer with the desired embedding model
+# Initialize analyzer with the desired alignment type
 # Choose one: "bert", "fasttext", or "lexsyn"
-embedding_model = "fasttext"  # Changed from "word2vec" to "fasttext"
+alignment_type = "fasttext"  # Changed from "word2vec" to "fasttext"
 
-# Create cache directory for FastText
-if embedding_model == "fasttext":
-    cache_dir = os.path.join(output_folder, "fasttext", "cache")  # Changed directory name
+# Create cache directory for models that need it
+if alignment_type in ["fasttext", "bert"]:
+    cache_dir = os.path.join(output_folder, alignment_type, "cache")
     os.makedirs(cache_dir, exist_ok=True)
-    analyzer = SemanticAlignment(embedding_model=embedding_model, cache_dir=cache_dir)
+    analyzer = LinguisticAlignment(alignment_type=alignment_type, cache_dir=cache_dir)
 else:
-    analyzer = SemanticAlignment(embedding_model=embedding_model)
+    analyzer = LinguisticAlignment(alignment_type=alignment_type)
 
 # Configure parameters for all types of embedding models
 # These will be used as needed based on the embedding model type
@@ -53,18 +53,18 @@ common_params = {
     "lag": 1
 }
 
-# # 1. First, analyze the real conversations
-# print(f"Analyzing real conversations with {embedding_model} model...")
-# real_results = analyzer.analyze_folder(
-#     folder_path=data_path,
-#     output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
-#     **common_params,
-#     **fasttext_params,  # Renamed from w2v_params
-#     **lexsyn_params
-# )
+# 1. First, analyze the real conversations
+print(f"Analyzing real conversations with {alignment_type} model...")
+real_results = analyzer.analyze_folder(
+    folder_path=data_path,
+    output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
+    **common_params,
+    **fasttext_params,  # Renamed from w2v_params
+    **lexsyn_params
+)
 
 # 2. Next, generate surrogate pairs and analyze them
-print(f"Generating and analyzing surrogate pairs with {embedding_model} model...")
+print(f"Generating and analyzing surrogate pairs with {alignment_type} model...")
 baseline_results = analyzer.analyze_baseline(
     input_files=data_path,
     output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
