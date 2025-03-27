@@ -525,11 +525,18 @@ class SemanticAlignmentW2V:
                 result_df = result_df.rename(columns={col: new_col_name})
                 break
         
+        # Save results if output directory is provided
         if output_directory and not result_df.empty:
-            # Remove embedding columns before saving
+            os.makedirs(output_directory, exist_ok=True)
+            
+            # Keep our existing code for removing embedding columns
             embedding_columns = [col for col in result_df.columns if 'embedding' in col]
-            result_df_to_save = result_df.drop(columns=embedding_columns, errors='ignore')
-            # Save the filtered dataframe
+            # Also remove dimension columns
+            dims_columns = [col for col in result_df.columns if '_dims' in col]
+            # Combine both lists
+            columns_to_remove = embedding_columns + dims_columns
+            
+            result_df_to_save = result_df.drop(columns=columns_to_remove, errors='ignore')
             output_path = os.path.join(output_directory, f"semantic_alignment_{self.model_name}_lag{lag}.csv")
             result_df_to_save.to_csv(output_path, index=False)
             print(f"Results saved to {output_path}")

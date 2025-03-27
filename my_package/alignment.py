@@ -94,30 +94,7 @@ class SemanticAlignment:
                 add_stanford_tags=add_stanford_tags,
                 **kwargs
             )
-        
-        # Optionally save as "real" results to distinguish from baseline
-        if results is not None and not results.empty and model_dir:
-            # Customize filename based on embedding model
-            if self.embedding_model == "lexsyn":
-                dup_str = "noDups" if ignore_duplicates else "withDups"
-                stan_str = "withStan" if add_stanford_tags else "noStan"
-                real_path = os.path.join(
-                    model_dir,
-                    f"real_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
-                )
-            elif self.embedding_model == "bert":
-                real_path = os.path.join(
-                    model_dir,
-                    f"real_alignment_bert_lag{lag}.csv"
-                )
-            elif self.embedding_model == "word2vec":
-                sd_str = f"sd{high_sd_cutoff}"
-                n_str = f"n{low_n_cutoff}"
-                real_path = os.path.join(
-                    model_dir,
-                    f"real_alignment_word2vec_lag{lag}_{sd_str}_{n_str}.csv"
-                )
-            
+                    
         return results
     
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
@@ -162,7 +139,7 @@ class SemanticAlignment:
             )
     
     def analyze_baseline(self, input_files, output_directory="results", surrogate_directory=None,
-                        all_surrogates=True, keep_original_turn_order=True, id_separator='\-',
+                        all_surrogates=True, keep_original_turn_order=True, id_separator='-',
                         condition_label='cond', dyad_label='dyad', lag=1, max_ngram=2,
                         high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True,
                         ignore_duplicates=True, add_stanford_tags=False, **kwargs):
@@ -175,7 +152,7 @@ class SemanticAlignment:
             surrogate_directory: Directory to save surrogate files (optional)
             all_surrogates: Whether to generate all possible surrogate pairings (default: True)
             keep_original_turn_order: Whether to maintain original turn order (default: True)
-            id_separator: Character separating dyad ID from condition ID (default: '\-')
+            id_separator: Character separating dyad ID from condition ID (default: '-')
             condition_label: String preceding condition ID in filenames (default: 'cond')
             dyad_label: String preceding dyad ID in filenames (default: 'dyad')
             lag: Number of turns to lag when analyzing alignment (default: 1)
@@ -190,8 +167,16 @@ class SemanticAlignment:
         Returns:
             pd.DataFrame: Baseline alignment results for surrogate pairs
         """
-        # Create a SurrogateAlignment instance with same embedding model
-        surrogate_aligner = SurrogateAlignment(embedding_model=self.embedding_model)
+         # Get the cache directory from the current analyzer
+        cache_dir = getattr(self.analyzer, 'cache_dir', None)
+        if hasattr(self, 'w2v_wrapper') and hasattr(self.w2v_wrapper, 'cache_dir'):
+            cache_dir = self.w2v_wrapper.cache_dir
+        
+        # Create a SurrogateAlignment instance with same embedding model AND cache directory
+        surrogate_aligner = SurrogateAlignment(
+            embedding_model=self.embedding_model,
+            cache_dir=cache_dir  # Pass the same cache directory
+        )
         
         # Pass through all parameters to the surrogate analyzer
         return surrogate_aligner.analyze_baseline(
