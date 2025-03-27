@@ -51,6 +51,9 @@ class Word2VecWrapper:
             print(f"Loading model: {self.model_name}")
             print(f"Using model cache directory: {self.cache_dir}")
             
+            # IMPORTANT: Set Gensim's download directory BEFORE trying to load
+            api.BASE_DIR = self.cache_dir
+            
             # Check if the model file exists in cache
             model_dir = os.path.join(self.cache_dir, self.model_name)
             if os.path.exists(model_dir):
