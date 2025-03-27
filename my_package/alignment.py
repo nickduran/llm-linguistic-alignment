@@ -53,7 +53,7 @@ class LinguisticAlignment:
         """
         # If output directory is provided, ensure model-specific directory exists
         if output_directory:
-            model_dir = os.path.join(output_directory, self.embedding_model)
+            model_dir = os.path.join(output_directory, self.alignment_type)
             os.makedirs(model_dir, exist_ok=True)
         else:
             model_dir = None
@@ -61,7 +61,7 @@ class LinguisticAlignment:
         # Process files with the appropriate analyzer
         results = None
         
-        if self.embedding_model == "bert":
+        if self.alignment_type == "bert":
             # BERT implementation
             results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
@@ -70,7 +70,7 @@ class LinguisticAlignment:
                 lag=lag,
                 **kwargs
             )
-        elif self.embedding_model == "fasttext":
+        elif self.alignment_type == "fasttext":
             # FastText implementation
             results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
@@ -82,7 +82,7 @@ class LinguisticAlignment:
                 save_vocab=save_vocab,
                 **kwargs
             )
-        elif self.embedding_model == "lexsyn":
+        elif self.alignment_type == "lexsyn":
             # LexSyn implementation
             results = self.analyzer.analyze_folder(
                 folder_path=folder_path,
@@ -115,10 +115,10 @@ class LinguisticAlignment:
         Returns:
             pd.DataFrame: Processed DataFrame with alignment metrics
         """
-        if self.embedding_model == "bert":
+        if self.alignment_type == "bert":
             # BERT implementation
             return self.analyzer.process_file(file_path=file_path, lag=lag, **kwargs)
-        elif self.embedding_model == "fasttext":
+        elif self.alignment_type == "fasttext":
             # FastText implementation
             return self.analyzer.process_file(
                 file_path=file_path, 
@@ -127,7 +127,7 @@ class LinguisticAlignment:
                 low_n_cutoff=low_n_cutoff,
                 **kwargs
             )
-        elif self.embedding_model == "lexsyn":
+        elif self.alignment_type == "lexsyn":
             # LexSyn implementation
             return self.analyzer.process_file(
                 file_path=file_path,
@@ -174,13 +174,13 @@ class LinguisticAlignment:
         
         # Create a SurrogateAlignment instance with same embedding model AND cache directory
         surrogate_aligner = SurrogateAlignment(
-            embedding_model=self.embedding_model,
+            embedding_model=self.alignment_type,
             cache_dir=cache_dir  # Pass the same cache directory
         )
         
         # Create model-specific output directory if provided
         if output_directory:
-            model_dir = os.path.join(output_directory, self.embedding_model)
+            model_dir = os.path.join(output_directory, self.alignment_type)
             os.makedirs(model_dir, exist_ok=True)
         else:
             model_dir = None

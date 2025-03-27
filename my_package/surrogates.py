@@ -280,19 +280,19 @@ class SurrogateAlignment:
     of alignment that would occur by chance.
     """
     
-    def __init__(self, embedding_model="lexsyn", cache_dir=None, model_name=None, token=None):
+    def __init__(self, alignment_type="lexsyn", cache_dir=None, model_name=None, token=None):
         """
         Initialize the surrogate alignment analyzer
         
         Args:
-            embedding_model: Type of embedding model to use for alignment
+            alignment_type: Type of alignment to use for analysis
             cache_dir: Directory to cache models (optional)
             model_name: Name of the specific model to use (optional)
             token: API token for model access (optional)
         """
         from .alignment import LinguisticAlignment
         self.alignment = LinguisticAlignment(
-            embedding_model=embedding_model, 
+            alignment_type=alignment_type,  # Changed from embedding_model
             model_name=model_name,
             token=token,
             cache_dir=cache_dir
@@ -377,18 +377,18 @@ class SurrogateAlignment:
             surrogate_results_clean = surrogate_results.drop(columns=columns_to_remove, errors='ignore')
             
             # Create baseline-specific filename
-            embedding_model = self.alignment.embedding_model
-            baseline_path = os.path.join(output_directory, f"baseline_alignment_{embedding_model}_lag{lag}.csv")
+            alignment_type = self.alignment.alignment_type
+            baseline_path = os.path.join(output_directory, f"baseline_alignment_{alignment_type}_lag{lag}.csv")
             
             # Add model-specific parameters to filename
-            if embedding_model == "lexsyn":
+            if alignment_type == "lexsyn":
                 dup_str = "noDups" if ignore_duplicates else "withDups"
                 stan_str = "withStan" if add_stanford_tags else "noStan"
                 baseline_path = os.path.join(
                     output_directory, 
                     f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
                 )
-            elif embedding_model == "fasttext":
+            elif alignment_type == "fasttext":
                 sd_str = f"sd{high_sd_cutoff}"
                 n_str = f"n{low_n_cutoff}"
                 baseline_path = os.path.join(
