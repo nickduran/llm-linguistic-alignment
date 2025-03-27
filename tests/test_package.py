@@ -53,15 +53,15 @@ common_params = {
     "lag": 1
 }
 
-# # 1. First, analyze the real conversations
-# print(f"Analyzing real conversations with {embedding_model} model...")
-# real_results = analyzer.analyze_folder(
-#     folder_path=data_path,
-#     output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
-#     **common_params,
-#     **w2v_params,
-#     **lexsyn_params
-# )
+# 1. First, analyze the real conversations
+print(f"Analyzing real conversations with {embedding_model} model...")
+real_results = analyzer.analyze_folder(
+    folder_path=data_path,
+    output_directory=output_folder,  # Now uses root directory, analyzer will create model-specific subdir
+    **common_params,
+    **w2v_params,
+    **lexsyn_params
+)
 
 # 2. Next, generate surrogate pairs and analyze them
 print(f"Generating and analyzing surrogate pairs with {embedding_model} model...")

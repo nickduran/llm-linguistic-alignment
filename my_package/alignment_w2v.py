@@ -7,7 +7,7 @@ import ast
 from collections import Counter
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
-from .word2vec_model import Word2VecWrapper
+from .fasttext_model import Word2VecWrapper
 
 class SemanticAlignmentW2V:
     def __init__(self, model_name="word2vec-google-news-300", cache_dir=None):

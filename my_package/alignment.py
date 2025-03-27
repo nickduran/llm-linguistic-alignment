@@ -167,7 +167,7 @@ class SemanticAlignment:
         Returns:
             pd.DataFrame: Baseline alignment results for surrogate pairs
         """
-         # Get the cache directory from the current analyzer
+        # Get the cache directory from the current analyzer
         cache_dir = getattr(self.analyzer, 'cache_dir', None)
         if hasattr(self, 'w2v_wrapper') and hasattr(self.w2v_wrapper, 'cache_dir'):
             cache_dir = self.w2v_wrapper.cache_dir
@@ -178,10 +178,17 @@ class SemanticAlignment:
             cache_dir=cache_dir  # Pass the same cache directory
         )
         
-        # Pass through all parameters to the surrogate analyzer
+        # Create model-specific output directory if provided
+        if output_directory:
+            model_dir = os.path.join(output_directory, self.embedding_model)
+            os.makedirs(model_dir, exist_ok=True)
+        else:
+            model_dir = None
+        
+        # Pass through all parameters to the surrogate analyzer, using model-specific directory
         return surrogate_aligner.analyze_baseline(
             input_files=input_files,
-            output_directory=output_directory,
+            output_directory=model_dir,  # Changed to use model-specific directory
             surrogate_directory=surrogate_directory,
             all_surrogates=all_surrogates,
             keep_original_turn_order=keep_original_turn_order,

@@ -1,4 +1,4 @@
-# my_package/word2vec_model.py
+# my_package/fasttext_model.py
 import os
 import numpy as np
 import gensim
@@ -8,13 +8,13 @@ import warnings
 import urllib.request
 import zipfile
 
-class Word2VecWrapper:
-    def __init__(self, model_name="word2vec-google-news-300", cache_dir=None):
+class FastTextWrapper:
+    def __init__(self, model_name="fasttext-wiki-news-300", cache_dir=None):
         """
-        Initialize Word2Vec model with caching
+        Initialize FastText model with caching
         
         Args:
-            model_name: Name of the Word2Vec model to use
+            model_name: Name of the FastText model to use
             cache_dir: Directory to cache models (optional)
         """
         self.model_name = model_name
@@ -44,7 +44,7 @@ class Word2VecWrapper:
     
     def _load_model(self):
         """
-        Load Word2Vec model from Gensim with simplified download handling
+        Load FastText model from Gensim with simplified download handling
         
         Returns:
             gensim.models.KeyedVectors: Loaded model
@@ -78,11 +78,11 @@ class Word2VecWrapper:
                 # Create directory if it doesn't exist
                 os.makedirs(self.cache_dir, exist_ok=True)
                 
-                # For word2vec-google-news-300, we know the direct URL
-                if self.model_name == "word2vec-google-news-300":
+                # For fasttext-wiki-news-300, we know the direct URL
+                if self.model_name == "fasttext-wiki-news-300":
                     
                     # Define the URL (this is a widely available mirror)
-                    url = "https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip"
+                    url = "https://dl.fbaipublicfiles.com/fasttext/vectors-english/wiki-news-300d-1M.vec.zip"
                     
                     # Simplified download code
                     print(f"Downloading from {url}...")
