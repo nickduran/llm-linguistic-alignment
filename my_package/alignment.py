@@ -6,28 +6,28 @@ from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateAlignment, SurrogateGenerator
 
 class LinguisticAlignment:
-    def __init__(self, embedding_model="bert", model_name=None, token=None, cache_dir=None):
+    def __init__(self, alignment_type="bert", model_name=None, token=None, cache_dir=None):
         """
-        Initialize a semantic alignment analyzer with a specified embedding model
+        Initialize a linguistic alignment analyzer with a specified alignment type
         
         Args:
-            embedding_model: Type of embedding model to use ('bert', 'fasttext', or 'lexsyn')
+            alignment_type: Type of alignment to analyze ('bert', 'fasttext', or 'lexsyn')
             model_name: Name of the specific model to use (optional)
             token: API token for model access (optional, needed for BERT only)
             cache_dir: Directory to cache models (optional)
         """
-        self.embedding_model = embedding_model.lower()
+        self.alignment_type = alignment_type.lower()
         
-        if self.embedding_model == "bert":
+        if self.alignment_type == "bert":
             model_name = model_name or "bert-base-uncased"
             self.analyzer = SemanticAlignmentAnalyzer(model_name=model_name, token=token)
-        elif self.embedding_model == "fasttext":
+        elif self.alignment_type == "fasttext":
             model_name = model_name or "fasttext-wiki-news-300"
             self.analyzer = SemanticAlignmentFastText(model_name=model_name, cache_dir=cache_dir)
-        elif self.embedding_model == "lexsyn":
+        elif self.alignment_type == "lexsyn":
             self.analyzer = LexicalSyntacticAlignment()
         else:
-            raise ValueError(f"Unsupported embedding model: {embedding_model}. Use 'bert', 'fasttext', or 'lexsyn'.")
+            raise ValueError(f"Unsupported alignment type: {alignment_type}. Use 'bert', 'fasttext', or 'lexsyn'.")
     
     def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
                     high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True, max_ngram=2, 
