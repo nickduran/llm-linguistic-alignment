@@ -9,12 +9,12 @@ from my_package.alignment import LinguisticAlignment
 
 # Define path to data folder 
 data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                        "my_package", "data", "prepped_stan_mid")
+                        "my_package", "data", "prepped_stan_small")
 output_folder = "tests/results2"
 
 # Initialize with one or more alignment types ("bert", "fasttext", or "lexsyn")
 analyzer = LinguisticAlignment(
-    alignment_types=["lexsyn"],  # Run multiple analyzers
+    alignment_types=["fasttext"],  # Run one or multiple analyzers
     cache_dir=os.path.join(output_folder, "cache")
 )
 
@@ -55,22 +55,24 @@ real_results = analyzer.analyze_folder(
 )
 
 # Analyze baseline
-baseline_results = analyzer.analyze_baseline(
-    input_files=data_path,
-    output_directory=output_folder,
-    **common_params,
-    **fasttext_params,
-    **lexsyn_params,
-    **surrogate_params  # Add surrogate-specific parameters
-)
+# baseline_results = analyzer.analyze_baseline(
+#     input_files=data_path,
+#     output_directory=output_folder,
+#     **common_params,
+#     **fasttext_params,
+#     **lexsyn_params,
+#     **surrogate_params  # Add surrogate-specific parameters
+# )
 
 # # Optional: use existing surrogates
 # alt_baseline = analyzer.analyze_baseline(
 #     input_files=data_path,
 #     output_directory=output_folder,
-#     use_existing_surrogates=os.path.join(output_folder, "surrogates/surrogate_run-1234567890"),
+#     use_existing_surrogates=os.path.join(output_folder, "surrogates/surrogate_run-1743116554.6883898"),
 #     **common_params,
 #     **fasttext_params,
 #     **lexsyn_params,
 #     **surrogate_params
 # )
+
+
