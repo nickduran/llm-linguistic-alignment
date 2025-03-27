@@ -34,8 +34,8 @@ if alignment_type in ["fasttext", "bert"]:
 else:
     analyzer = LinguisticAlignment(alignment_type=alignment_type)
 
-# Configure parameters for all types of embedding models
-# These will be used as needed based on the embedding model type
+# Configure parameters for all types of analyzers
+# These will be used as needed based on the analyzer types
 fasttext_params = {  # Renamed from w2v_params to fasttext_params
     "high_sd_cutoff": 3,    # Filter out words with frequency > mean + 3*std
     "low_n_cutoff": 1,      # Filter out words occurring < 1 times
@@ -48,7 +48,7 @@ lexsyn_params = {
     "add_stanford_tags": True
 }
 
-# Parameters for any embedding model
+# Parameters for any analyzer
 common_params = {
     "lag": 1
 }

@@ -333,17 +333,24 @@ class SurrogateAlignment:
         # Ensure root output directory exists
         os.makedirs(output_directory, exist_ok=True)
         
+        # Get cache directory from the alignment object
+        cache_dir = None
+        if hasattr(self.alignment, 'cache_dir') and self.alignment.cache_dir:
+            cache_dir = self.alignment.cache_dir
+        else:
+            # For backward compatibility, try to get cache_dir from analyzers
+            alignment_type = self.alignment.alignment_type
+            if alignment_type and hasattr(self.alignment, 'analyzers') and alignment_type in self.alignment.analyzers:
+                analyzer = self.alignment.analyzers[alignment_type]
+                if hasattr(analyzer, 'cache_dir'):
+                    cache_dir = analyzer.cache_dir
+                elif hasattr(analyzer, 'fasttext_wrapper') and hasattr(analyzer.fasttext_wrapper, 'cache_dir'):
+                    cache_dir = analyzer.fasttext_wrapper.cache_dir
+        
         # Set up surrogate directory if using new surrogates
         if use_existing_surrogates is None:
             surrogate_dir = surrogate_directory or os.path.join(output_directory, "surrogates")
             os.makedirs(surrogate_dir, exist_ok=True)
-            
-            # Get cache directory from the alignment object
-            cache_dir = None
-            if hasattr(self.alignment, 'w2v_wrapper') and hasattr(self.alignment.w2v_wrapper, 'cache_dir'):
-                cache_dir = self.alignment.w2v_wrapper.cache_dir
-            elif hasattr(self.alignment.analyzer, 'cache_dir'):
-                cache_dir = self.alignment.analyzer.cache_dir
             
             # Resolve input files
             if isinstance(input_files, str) and os.path.isdir(input_files):

@@ -9,6 +9,7 @@ sandbox/
 gensim-data/
 .config/
 tests/results
+tests/results2
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
