@@ -6,96 +6,93 @@ from .alignment_lexsyn import LexicalSyntacticAlignment
 from .surrogates import SurrogateAlignment, SurrogateGenerator
 
 class LinguisticAlignment:
-    def __init__(self, alignment_type="bert", model_name=None, token=None, cache_dir=None):
+    def __init__(self, alignment_type=None, alignment_types=None, **kwargs):
         """
-        Initialize a linguistic alignment analyzer with a specified alignment type
+        Initialize with one or more linguistic alignment analyzers
         
         Args:
-            alignment_type: Type of alignment to analyze ('bert', 'fasttext', or 'lexsyn')
-            model_name: Name of the specific model to use (optional)
-            token: API token for model access (optional, needed for BERT only)
-            cache_dir: Directory to cache models (optional)
+            alignment_type: String specifying analyzer type (backward compatibility)
+            alignment_types: String or list of strings specifying analyzer types
+            **kwargs: Configuration parameters (model_name, cache_dir, etc.)
         """
-        self.alignment_type = alignment_type.lower()
+        # Handle both parameters for backward compatibility
+        if alignment_type and not alignment_types:
+            alignment_types = [alignment_type]
+        elif alignment_types is None:
+            alignment_types = ["bert"]  # Default
+        elif alignment_types == "all":
+            alignment_types = ["bert", "fasttext", "lexsyn"]
+        elif isinstance(alignment_types, str):
+            alignment_types = [alignment_types]
+            
+        self.analyzers = {}
+        self.cache_dir = kwargs.get("cache_dir")
         
-        if self.alignment_type == "bert":
-            model_name = model_name or "bert-base-uncased"
-            self.analyzer = SemanticAlignmentAnalyzer(model_name=model_name, token=token)
-        elif self.alignment_type == "fasttext":
-            model_name = model_name or "fasttext-wiki-news-300"
-            self.analyzer = SemanticAlignmentFastText(model_name=model_name, cache_dir=cache_dir)
-        elif self.alignment_type == "lexsyn":
-            self.analyzer = LexicalSyntacticAlignment()
-        else:
-            raise ValueError(f"Unsupported alignment type: {alignment_type}. Use 'bert', 'fasttext', or 'lexsyn'.")
+        for align_type in alignment_types:
+            align_type = align_type.lower()
+            
+            if align_type == "bert":
+                model_name = kwargs.get("model_name", "bert-base-uncased")
+                token = kwargs.get("token")
+                self.analyzers["bert"] = SemanticAlignmentAnalyzer(
+                    model_name=model_name, 
+                    token=token
+                )
+                
+            elif align_type == "fasttext":
+                model_name = kwargs.get("model_name", "fasttext-wiki-news-300")
+                self.analyzers["fasttext"] = SemanticAlignmentFastText(
+                    model_name=model_name, 
+                    cache_dir=self.cache_dir
+                )
+                
+            elif align_type == "lexsyn":
+                self.analyzers["lexsyn"] = LexicalSyntacticAlignment()
+            else:
+                raise ValueError(f"Unsupported alignment type: {align_type}")
+        
+        # Store the primary alignment type for backward compatibility
+        self.alignment_type = alignment_types[0] if alignment_types else None
     
-    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
-                    high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True, max_ngram=2, 
-                    ignore_duplicates=True, add_stanford_tags=False, **kwargs):
+    def analyze_folder(self, folder_path, output_directory=None, **kwargs):
         """
         Analyze alignment for all text files in a folder
         
         Args:
             folder_path: Path to folder containing text files
-            output_directory: Root directory to save results (optional)
-            file_pattern: Pattern to match text files (default: "*.txt")
-            lag: Number of turns to lag when pairing utterances (default: 1)
-            high_sd_cutoff: Standard deviation cutoff for high-frequency words (FastText only)
-            low_n_cutoff: Minimum frequency cutoff (FastText only)
-            save_vocab: Whether to save vocabulary lists (FastText only)
-            max_ngram: Maximum n-gram size to compute (LexSyn only)
-            ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
-            add_stanford_tags: Whether to include Stanford POS tags (LexSyn only)
-            **kwargs: Additional arguments passed to the underlying analyzer
+            output_directory: Root directory to save results
+            **kwargs: Parameters for various analyzers
             
         Returns:
-            pd.DataFrame: Concatenated results for all files
+            pd.DataFrame: Concatenated results or merged results from multiple analyzers
         """
-        # If output directory is provided, ensure model-specific directory exists
-        if output_directory:
-            model_dir = os.path.join(output_directory, self.alignment_type)
-            os.makedirs(model_dir, exist_ok=True)
-        else:
-            model_dir = None
+        results = {}
         
-        # Process files with the appropriate analyzer
-        results = None
+        for analyzer_type, analyzer in self.analyzers.items():
+            # Create analyzer-specific output directory
+            analyzer_dir = None
+            if output_directory:
+                analyzer_dir = os.path.join(output_directory, analyzer_type)
+                os.makedirs(analyzer_dir, exist_ok=True)
+            
+            # Filter kwargs to only include relevant parameters for this analyzer
+            filtered_kwargs = self._filter_kwargs_for_analyzer(analyzer_type, kwargs)
+            
+            # Run analysis with filtered parameters
+            analyzer_results = analyzer.analyze_folder(
+                folder_path=folder_path,
+                output_directory=analyzer_dir,
+                **filtered_kwargs
+            )
+            
+            results[analyzer_type] = analyzer_results
         
-        if self.alignment_type == "bert":
-            # BERT implementation
-            results = self.analyzer.analyze_folder(
-                folder_path=folder_path,
-                output_directory=model_dir,  # Use model-specific directory
-                file_pattern=file_pattern,
-                lag=lag,
-                **kwargs
-            )
-        elif self.alignment_type == "fasttext":
-            # FastText implementation
-            results = self.analyzer.analyze_folder(
-                folder_path=folder_path,
-                output_directory=model_dir,  # Use model-specific directory
-                file_pattern=file_pattern,
-                lag=lag,
-                high_sd_cutoff=high_sd_cutoff,
-                low_n_cutoff=low_n_cutoff,
-                save_vocab=save_vocab,
-                **kwargs
-            )
-        elif self.alignment_type == "lexsyn":
-            # LexSyn implementation
-            results = self.analyzer.analyze_folder(
-                folder_path=folder_path,
-                output_directory=model_dir,  # Use model-specific directory
-                file_pattern=file_pattern,
-                lag=lag,
-                max_ngram=max_ngram,
-                ignore_duplicates=ignore_duplicates,
-                add_stanford_tags=add_stanford_tags,
-                **kwargs
-            )
-                    
-        return results
+        # If only one analyzer, return its results directly
+        if len(results) == 1:
+            return next(iter(results.values()))
+        
+        # Otherwise merge results from multiple analyzers
+        return self._merge_results(results)
     
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
                     ignore_duplicates=True, add_stanford_tags=False, **kwargs):
@@ -138,69 +135,133 @@ class LinguisticAlignment:
                 **kwargs
             )
     
-    def analyze_baseline(self, input_files, output_directory="results", surrogate_directory=None,
-                        all_surrogates=True, keep_original_turn_order=True, id_separator='-',
-                        condition_label='cond', dyad_label='dyad', lag=1, max_ngram=2,
-                        high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True,
-                        ignore_duplicates=True, add_stanford_tags=False, **kwargs):
+    def analyze_baseline(self, input_files, output_directory=None, surrogate_directory=None,
+                        use_existing_surrogates=None, **kwargs):
         """
-        Generate surrogate conversation pairs and analyze their alignment as a baseline
+        Generate surrogate conversation pairs and analyze their alignment
         
         Args:
-            input_files: Path to directory containing conversation files or list of file paths
-            output_directory: Directory to save alignment results (default: "results")
-            surrogate_directory: Directory to save surrogate files (optional)
-            all_surrogates: Whether to generate all possible surrogate pairings (default: True)
-            keep_original_turn_order: Whether to maintain original turn order (default: True)
-            id_separator: Character separating dyad ID from condition ID (default: '-')
-            condition_label: String preceding condition ID in filenames (default: 'cond')
-            dyad_label: String preceding dyad ID in filenames (default: 'dyad')
-            lag: Number of turns to lag when analyzing alignment (default: 1)
-            max_ngram: Maximum n-gram size for lexical/syntactic analysis (default: 2)
-            high_sd_cutoff: Standard deviation cutoff for high-frequency words (FastText only)
-            low_n_cutoff: Minimum frequency cutoff (FastText only)
-            save_vocab: Whether to save vocabulary lists (FastText only)
-            ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
-            add_stanford_tags: Whether to include Stanford POS tags (default: False)
-            **kwargs: Additional arguments for alignment analysis
+            input_files: Path to directory containing conversation files or list of files
+            output_directory: Root directory to save results
+            surrogate_directory: Directory to save new surrogate files
+            use_existing_surrogates: Path to existing surrogate files to use
+            **kwargs: Additional parameters
+        """
+        results = {}
+        
+        for analyzer_type, analyzer in self.analyzers.items():
+            # Create analyzer-specific output directory
+            analyzer_dir = None
+            if output_directory:
+                analyzer_dir = os.path.join(output_directory, analyzer_type)
+                os.makedirs(analyzer_dir, exist_ok=True)
+            
+            # Create surrogate analyzer with same parameters
+            surrogate_analyzer = SurrogateAlignment(
+                alignment_type=analyzer_type,
+                cache_dir=self.cache_dir
+            )
+            
+            # Filter kwargs to only include relevant parameters
+            filtered_kwargs = self._filter_kwargs_for_analyzer(analyzer_type, kwargs)
+            
+            # Run baseline analysis
+            baseline_results = surrogate_analyzer.analyze_baseline(
+                input_files=input_files,
+                output_directory=analyzer_dir,
+                surrogate_directory=surrogate_directory,
+                use_existing_surrogates=use_existing_surrogates,
+                **filtered_kwargs
+            )
+            
+            results[analyzer_type] = baseline_results
+        
+        # If only one analyzer, return its results directly
+        if len(results) == 1:
+            return next(iter(results.values()))
+        
+        # Otherwise merge results from multiple analyzers
+        return self._merge_results(results)
+    
+    def _filter_kwargs_for_analyzer(self, analyzer_type, kwargs):
+        """
+        Filter kwargs to only include relevant parameters for this analyzer
+        
+        Args:
+            analyzer_type: Type of analyzer ("bert", "fasttext", "lexsyn")
+            kwargs: Dictionary of all parameters
             
         Returns:
-            pd.DataFrame: Baseline alignment results for surrogate pairs
+            dict: Filtered parameters relevant to the specified analyzer
         """
-        # Get the cache directory from the current analyzer
-        cache_dir = getattr(self.analyzer, 'cache_dir', None)
-        if hasattr(self.analyzer, 'fasttext_wrapper') and hasattr(self.analyzer.fasttext_wrapper, 'cache_dir'):
-            cache_dir = self.analyzer.fasttext_wrapper.cache_dir
+        # Define which parameters apply to which analyzers
+        common_params = ["lag", "file_pattern", "output_directory"]
         
-        # Create a SurrogateAlignment instance with same alignment type AND cache directory
-        surrogate_aligner = SurrogateAlignment(
-            alignment_type=self.alignment_type,  # Changed from embedding_model
-            cache_dir=cache_dir
-        )
+        bert_params = ["model_name", "token"]
         
-        # Create alignment-type-specific output directory if provided
-        if output_directory:
-            model_dir = os.path.join(output_directory, self.alignment_type)  # Changed from self.embedding_model
-            os.makedirs(model_dir, exist_ok=True)
+        fasttext_params = ["model_name", "high_sd_cutoff", "low_n_cutoff", 
+                        "save_vocab"]
+        
+        lexsyn_params = ["max_ngram", "ignore_duplicates", "add_stanford_tags"]
+        
+        surrogate_params = ["all_surrogates", "keep_original_turn_order", 
+                        "id_separator", "condition_label", "dyad_label"]
+        
+        # Determine which parameters to include
+        if analyzer_type == "bert":
+            valid_params = common_params + bert_params + surrogate_params
+        elif analyzer_type == "fasttext":
+            valid_params = common_params + fasttext_params + surrogate_params
+        elif analyzer_type == "lexsyn":
+            valid_params = common_params + lexsyn_params + surrogate_params
         else:
-            model_dir = None
+            valid_params = common_params + surrogate_params
         
-        # Pass through all parameters to the surrogate analyzer, using alignment-type-specific directory
-        return surrogate_aligner.analyze_baseline(
-            input_files=input_files,
-            output_directory=model_dir,
-            surrogate_directory=surrogate_directory,
-            all_surrogates=all_surrogates,
-            keep_original_turn_order=keep_original_turn_order,
-            id_separator=id_separator,
-            condition_label=condition_label,
-            dyad_label=dyad_label,
-            lag=lag,
-            max_ngram=max_ngram,
-            high_sd_cutoff=high_sd_cutoff,
-            low_n_cutoff=low_n_cutoff,
-            save_vocab=save_vocab,
-            ignore_duplicates=ignore_duplicates,
-            add_stanford_tags=add_stanford_tags,
-            **kwargs
-        )
+        # Filter kwargs to only include valid parameters
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
+        
+        return filtered_kwargs
+
+    def _merge_results(self, results_dict):
+        """
+        Merge results from multiple analyzers into a single DataFrame
+        
+        Args:
+            results_dict: Dictionary mapping analyzer type to DataFrame
+            
+        Returns:
+            pd.DataFrame: Merged results
+        """
+        if not results_dict:
+            return pd.DataFrame()
+        
+        # Start with the first dataframe
+        analyzer_types = list(results_dict.keys())
+        base_df = results_dict[analyzer_types[0]].copy()
+        
+        # Identify common columns (metadata) that exist in all dataframes
+        common_cols = set(base_df.columns)
+        for df in results_dict.values():
+            common_cols &= set(df.columns)
+        
+        # Remove embedding columns from common columns
+        common_cols = [col for col in common_cols if 'embedding' not in col and '_dims' not in col]
+        
+        # For each additional analyzer, add its unique columns to the base DataFrame
+        for analyzer_type in analyzer_types[1:]:
+            df = results_dict[analyzer_type]
+            
+            # Find unique columns in this dataframe (excluding common columns)
+            unique_cols = [col for col in df.columns if col not in common_cols or col.endswith('_cosine_similarity')]
+            
+            # Add unique columns to base dataframe
+            for col in unique_cols:
+                # Rename similarity columns to include analyzer type
+                if col.endswith('_cosine_similarity'):
+                    new_col = f"{analyzer_type}_{col}"
+                    base_df[new_col] = df[col]
+                # Add other unique columns directly
+                elif col not in base_df.columns:
+                    base_df[col] = df[col]
+        
+        return base_df

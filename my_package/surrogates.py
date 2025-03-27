@@ -300,48 +300,82 @@ class SurrogateAlignment:
         self.surrogate_generator = SurrogateGenerator()
     
     def analyze_baseline(self, input_files, output_directory="results", surrogate_directory=None,
-                        all_surrogates=True, keep_original_turn_order=True, id_separator='-',
+                        use_existing_surrogates=None, all_surrogates=True, 
+                        keep_original_turn_order=True, id_separator='-',
                         condition_label='cond', dyad_label='dyad', lag=1, max_ngram=2,
-                        high_sd_cutoff=3, low_n_cutoff=1, save_vocab=False,
+                        high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True,
                         ignore_duplicates=True, add_stanford_tags=False, **kwargs):
         """
-        Generate surrogate pairs and analyze their alignment as a baseline
+        Generate surrogate conversation pairs and analyze their alignment as a baseline
+        
+        Args:
+            input_files: Path to directory containing conversation files or list of file paths
+            output_directory: Directory to save alignment results (default: "results")
+            surrogate_directory: Directory to save surrogate files (optional)
+            use_existing_surrogates: Path to existing surrogate files to use instead of generating new ones
+            all_surrogates: Whether to generate all possible surrogate pairings (default: True)
+            keep_original_turn_order: Whether to maintain original turn order (default: True)
+            id_separator: Character separating dyad ID from condition ID (default: '-')
+            condition_label: String preceding condition ID in filenames (default: 'cond')
+            dyad_label: String preceding dyad ID in filenames (default: 'dyad')
+            lag: Number of turns to lag when analyzing alignment (default: 1)
+            max_ngram: Maximum n-gram size for lexical/syntactic analysis (default: 2)
+            high_sd_cutoff: Standard deviation cutoff for high-frequency words (FastText only)
+            low_n_cutoff: Minimum frequency cutoff (FastText only)
+            save_vocab: Whether to save vocabulary lists (FastText only)
+            ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
+            add_stanford_tags: Whether to include Stanford POS tags (default: False)
+            **kwargs: Additional arguments for alignment analysis
+            
+        Returns:
+            pd.DataFrame: Baseline alignment results for surrogate pairs
         """
         # Ensure root output directory exists
         os.makedirs(output_directory, exist_ok=True)
         
-        # Set up surrogate directory
-        surrogate_dir = surrogate_directory or os.path.join(output_directory, "surrogates")
-        os.makedirs(surrogate_dir, exist_ok=True)
-        
-        # Get cache directory from the alignment object
-        cache_dir = None
-        if hasattr(self.alignment, 'w2v_wrapper') and hasattr(self.alignment.w2v_wrapper, 'cache_dir'):
-            cache_dir = self.alignment.w2v_wrapper.cache_dir
-        elif hasattr(self.alignment.analyzer, 'cache_dir'):
-            cache_dir = self.alignment.analyzer.cache_dir
-        
-        # Resolve input files
-        if isinstance(input_files, str) and os.path.isdir(input_files):
-            file_list = glob.glob(os.path.join(input_files, "*.txt"))
-        elif isinstance(input_files, list):
-            file_list = input_files
+        # Set up surrogate directory if using new surrogates
+        if use_existing_surrogates is None:
+            surrogate_dir = surrogate_directory or os.path.join(output_directory, "surrogates")
+            os.makedirs(surrogate_dir, exist_ok=True)
+            
+            # Get cache directory from the alignment object
+            cache_dir = None
+            if hasattr(self.alignment, 'w2v_wrapper') and hasattr(self.alignment.w2v_wrapper, 'cache_dir'):
+                cache_dir = self.alignment.w2v_wrapper.cache_dir
+            elif hasattr(self.alignment.analyzer, 'cache_dir'):
+                cache_dir = self.alignment.analyzer.cache_dir
+            
+            # Resolve input files
+            if isinstance(input_files, str) and os.path.isdir(input_files):
+                file_list = glob.glob(os.path.join(input_files, "*.txt"))
+            elif isinstance(input_files, list):
+                file_list = input_files
+            else:
+                raise ValueError("input_files must be a directory path or list of file paths")
+            
+            # Generate surrogate conversation pairs
+            print(f"Generating surrogate conversation pairs from {len(file_list)} files...")
+            self.surrogate_generator.output_directory = surrogate_dir
+            surrogate_files = self.surrogate_generator.generate_surrogates(
+                original_conversation_list=file_list,
+                all_surrogates=all_surrogates,
+                keep_original_turn_order=keep_original_turn_order,
+                id_separator=id_separator,
+                dyad_label=dyad_label,
+                condition_label=condition_label
+            )
+            
+            print(f"Generated {len(surrogate_files)} surrogate files")
         else:
-            raise ValueError("input_files must be a directory path or list of file paths")
-        
-        # Generate surrogate conversation pairs
-        print(f"Generating surrogate conversation pairs from {len(file_list)} files...")
-        self.surrogate_generator.output_directory = surrogate_dir
-        surrogate_files = self.surrogate_generator.generate_surrogates(
-            original_conversation_list=file_list,
-            all_surrogates=all_surrogates,
-            keep_original_turn_order=keep_original_turn_order,
-            id_separator=id_separator,
-            dyad_label=dyad_label,
-            condition_label=condition_label
-        )
-        
-        print(f"Generated {len(surrogate_files)} surrogate files")
+            # Use existing surrogate files
+            if not os.path.isdir(use_existing_surrogates):
+                raise ValueError(f"Specified surrogate directory does not exist: {use_existing_surrogates}")
+                
+            surrogate_files = glob.glob(os.path.join(use_existing_surrogates, "*.txt"))
+            if not surrogate_files:
+                raise ValueError(f"No surrogate files found in {use_existing_surrogates}")
+                
+            print(f"Using {len(surrogate_files)} existing surrogate files from {use_existing_surrogates}")
         
         # Run alignment analysis on surrogate pairs
         print("Running alignment analysis on surrogate pairs...")
@@ -355,14 +389,10 @@ class SurrogateAlignment:
             'max_ngram': max_ngram,
             'ignore_duplicates': ignore_duplicates,
             'add_stanford_tags': add_stanford_tags,
-            'save_vocab': False,  # Don't save vocabulary again
+            'save_vocab': save_vocab,
             'high_sd_cutoff': high_sd_cutoff,
             'low_n_cutoff': low_n_cutoff
         }
-        
-        # Add cache_dir if it exists
-        if cache_dir:
-            alignment_params['cache_dir'] = cache_dir
         
         # Add any additional kwargs
         alignment_params.update(kwargs)
