@@ -9,31 +9,31 @@ from my_package.alignment import LinguisticAlignment
 
 # Define path to data folder 
 data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                        "my_package", "data", "prepped_stan_small")
+                        "my_package", "data", "prepped_stan_mid")
 output_folder = "tests/results2"
 
 # Initialize with one or more alignment types ("bert", "fasttext", or "lexsyn")
 analyzer = LinguisticAlignment(
-    alignment_types=["fasttext"],  # Run one or multiple analyzers
+    alignment_types=["fasttext", "bert", "lexsyn"],  # Run one or multiple analyzers
     cache_dir=os.path.join(output_folder, "cache")
 )
 
 # Configure parameters for all types of analyzers
 fasttext_params = {
-    "high_sd_cutoff": 3,    # Filter out words with frequency > mean + 3*std
-    "low_n_cutoff": 1,      # Filter out words occurring < 1 times
-    "save_vocab": True      # Save vocabulary lists to output directory
+    "high_sd_cutoff": 2.5,    # Filter out words with frequency > mean + 3*std
+    "low_n_cutoff": 2,      # Filter out words occurring < 1 times
+    "save_vocab": False      # Save vocabulary lists to output directory
 }
 
 lexsyn_params = {
-    "max_ngram": 3,
-    "ignore_duplicates": True,
-    "add_stanford_tags": True
+    "max_ngram": 4,
+    "ignore_duplicates": False,
+    "add_stanford_tags": False
 }
 
 # Common parameters for any analyzer
 common_params = {
-    "lag": 1
+    "lag": 3
 }
 
 # Surrogate generation parameters
@@ -64,15 +64,15 @@ baseline_results = analyzer.analyze_baseline(
     **surrogate_params  # Add surrogate-specific parameters
 )
 
-# # Optional: use existing surrogates
-# alt_baseline = analyzer.analyze_baseline(
-#     input_files=data_path,
-#     output_directory=output_folder,
-#     use_existing_surrogates=os.path.join(output_folder, "surrogates/surrogate_run-1743116554.6883898"),
-#     **common_params,
-#     **fasttext_params,
-#     **lexsyn_params,
-#     **surrogate_params
-# )
+# Optional: use existing surrogates
+alt_baseline = analyzer.analyze_baseline(
+    input_files=data_path,
+    output_directory=output_folder,
+    use_existing_surrogates=os.path.join(output_folder, "surrogates/surrogate_run-1743180264.262242"),
+    **common_params,
+    **fasttext_params,
+    **lexsyn_params,
+    **surrogate_params
+)
 
 
