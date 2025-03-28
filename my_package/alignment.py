@@ -1,6 +1,7 @@
 # my_package/alignment.py
 import os
 import glob
+import re 
 import pandas as pd
 from .alignment_bert import SemanticAlignmentAnalyzer
 from .alignment_fasttext import SemanticAlignmentFastText
