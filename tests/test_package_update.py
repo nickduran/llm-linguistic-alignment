@@ -27,7 +27,7 @@ fasttext_params = {
 
 lexsyn_params = {
     "max_ngram": 3,
-    "ignore_duplicates": False,
+    "ignore_duplicates": True,
     "add_stanford_tags": False
 }
 

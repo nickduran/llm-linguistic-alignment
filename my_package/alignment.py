@@ -429,10 +429,6 @@ class LinguisticAlignment:
             
             # Add unique columns to base dataframe
             for col in unique_cols:
-                # Skip embedding and dimension columns
-                if 'embedding' in col or '_dims' in col:
-                    continue
-                    
                 # Rename similarity columns to include analyzer type
                 if col.endswith('_cosine_similarity'):
                     new_col = f"{analyzer_type}_{col}"
@@ -441,16 +437,52 @@ class LinguisticAlignment:
                 elif col not in base_df.columns:
                     base_df[col] = df[col]
         
-        # Ensure no embedding or dimension columns are in the final result
-        cols_to_remove = [col for col in base_df.columns if 'embedding' in col or '_dims' in col]
-        if cols_to_remove:
-            base_df = base_df.drop(columns=cols_to_remove, errors='ignore')
-
         # Save merged results if output directory is provided
         if output_directory and not base_df.empty:
+            # Convert specific columns to uppercase
+            columns_to_uppercase = [
+                'lexical_master_cosine',
+                'syntactic_master_cosine',
+                'master_fasttext-wiki-news-300_cosine_similarity',
+                'bert_bert-base-uncased_cosine_similarity'
+            ]
+            
+            # Create a new DataFrame with renamed columns
+            renamed_df = base_df.copy()
+            
+            # Rename columns to uppercase where needed
+            for col in columns_to_uppercase:
+                if col in renamed_df.columns:
+                    # Create new uppercase column
+                    renamed_df[col.upper()] = renamed_df[col]
+                    # Drop the original lowercase column
+                    renamed_df = renamed_df.drop(columns=[col])
+            
+            # Define the desired column order
+            desired_cols = [
+                'source_file', 'time', 'participant', 'content', 'token', 'lemma', 
+                'tagged_token', 'tagged_lemma', 'tagged_stan_token', 'tagged_stan_lemma', 
+                'lag', 'utter_order', 'content1', 'content2', 'utterance_length1', 'utterance_length2',
+                'lexical_tok1_cosine', 'lexical_lem1_cosine', 'pos_tok1_cosine', 'pos_lem1_cosine', 
+                'stan_pos_tok1_cosine', 'stan_pos_lem1_cosine', 'lexical_tok2_cosine', 'lexical_lem2_cosine',
+                'pos_tok2_cosine', 'pos_lem2_cosine', 'stan_pos_tok2_cosine', 'stan_pos_lem2_cosine',
+                'lexical_tok3_cosine', 'lexical_lem3_cosine', 'pos_tok3_cosine', 'pos_lem3_cosine',
+                'stan_pos_tok3_cosine', 'stan_pos_lem3_cosine', 'LEXICAL_MASTER_COSINE', 
+                'SYNTACTIC_MASTER_COSINE', 'fasttext_fasttext-wiki-news-300_cosine_similarity',
+                'token_fasttext-wiki-news-300_cosine_similarity', 'lemma_fasttext-wiki-news-300_cosine_similarity',
+                'MASTER_FASTTEXT-WIKI-NEWS-300_COSINE_SIMILARITY', 'BERT_BERT-BASE-UNCASED_COSINE_SIMILARITY'
+            ]
+            
+            # Keep only columns that exist in the DataFrame and in the desired order
+            final_cols = [col for col in desired_cols if col in renamed_df.columns]
+            
+            # Reorder and select only the specified columns
+            final_df = renamed_df[final_cols]
+            
+            # Save the final DataFrame
             os.makedirs(output_directory, exist_ok=True)
-            merged_output_path = os.path.join(output_directory, "merged_alignment_results.csv")
-            base_df.to_csv(merged_output_path, index=False)
-            print(f"Merged results from {', '.join(analyzer_types)} saved to {merged_output_path}")
+            merged_output_path = os.path.join(output_directory, f"merged_alignment_results_lag{base_df['lag'].iloc[0] if 'lag' in base_df.columns else 1}.csv")
+            final_df.to_csv(merged_output_path, index=False)
+            print(f"Merged results from {', '.join(results_dict.keys())} saved to {merged_output_path}")
         
         return base_df

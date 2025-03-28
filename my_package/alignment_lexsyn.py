@@ -52,7 +52,7 @@ class LexicalSyntacticAlignment:
         sum2 = sum([vec2[x]**2 for x in vec2.keys()])
         denominator = sqrt(sum1) * sqrt(sum2)
 
-        return float(numerator) / denominator if denominator else 0.0
+        return float(numerator) / denominator if denominator else np.nan
     
     def compute_ngrams(self, sequence1, sequence2, ngram_size=2, ignore_duplicates=True, is_tagged=False):
         """
@@ -134,10 +134,10 @@ class LexicalSyntacticAlignment:
         if 'participant' in df.columns:
             df['utter_order'] = df['participant'] + ' ' + df['participant'].shift(-lag)
         
-        # Drop rows with NaN values in the lagged columns
-        non_na_cols = [f"{col}{suffix2}" for col in columns_to_lag if f"{col}{suffix2}" in df.columns]
-        if non_na_cols:
-            return df.dropna(subset=non_na_cols)
+        # # Drop rows with NaN values in the lagged columns
+        # non_na_cols = [f"{col}{suffix2}" for col in columns_to_lag if f"{col}{suffix2}" in df.columns]
+        # if non_na_cols:
+        #     return df.dropna(subset=non_na_cols)
         return df
     
     def process_file(self, file_path, max_ngram=2, lag=1, ignore_duplicates=True, add_stanford_tags=False):
@@ -233,49 +233,73 @@ class LexicalSyntacticAlignment:
                 for n in range(1, max_ngram + 1):
                     # Process if token columns exist
                     if all(col in row for col in ['token1', 'token2']):
-                        # Lexical analysis for tokens
-                        lex_tok1_count, lex_tok2_count, _, _ = self.compute_ngrams(
-                            row['token1'], row['token2'], ngram_size=n, ignore_duplicates=False, is_tagged=False)
-                        results[f'lexical_tok{n}_cosine'] = self.get_cosine_similarity(lex_tok1_count, lex_tok2_count)
+                        if row['token1'] is not None and row['token2'] is not None and len(row['token1']) > 0 and len(row['token2']) > 0:    
+                            # Lexical analysis for tokens
+                            lex_tok1_count, lex_tok2_count, _, _ = self.compute_ngrams(
+                                row['token1'], row['token2'], ngram_size=n, ignore_duplicates=False, is_tagged=False)
+                            results[f'lexical_tok{n}_cosine'] = self.get_cosine_similarity(lex_tok1_count, lex_tok2_count)
+                        else:
+                            # Set to NaN if either value is NaN
+                            results[f'lexical_tok{n}_cosine'] = np.nan  
                     
                     # Process if lemma columns exist
                     if all(col in row for col in ['lemma1', 'lemma2']):
-                        # Lexical analysis for lemmas
-                        lex_lem1_count, lex_lem2_count, _, _ = self.compute_ngrams(
-                            row['lemma1'], row['lemma2'], ngram_size=n, ignore_duplicates=False, is_tagged=False)
-                        results[f'lexical_lem{n}_cosine'] = self.get_cosine_similarity(lex_lem1_count, lex_lem2_count)
+                        if row['lemma1'] is not None and row['lemma2'] is not None and len(row['lemma1']) > 0 and len(row['lemma2']) > 0:
+                            # Lexical analysis for lemmas
+                            lex_lem1_count, lex_lem2_count, _, _ = self.compute_ngrams(
+                                row['lemma1'], row['lemma2'], ngram_size=n, ignore_duplicates=False, is_tagged=False)
+                            results[f'lexical_lem{n}_cosine'] = self.get_cosine_similarity(lex_lem1_count, lex_lem2_count)
+                        else:
+                            # Set to NaN if either value is NaN
+                            results[f'lexical_lem{n}_cosine'] = np.nan
                     
                     # Process if tagged token columns exist
                     if all(col in row for col in ['tagged_token1', 'tagged_token2']):
-                        # POS analysis for tokens
-                        _, _, pos_tok1_count, pos_tok2_count = self.compute_ngrams(
-                            row['tagged_token1'], row['tagged_token2'], 
-                            ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
-                        results[f'pos_tok{n}_cosine'] = self.get_cosine_similarity(pos_tok1_count, pos_tok2_count)
+                        if row['tagged_token1'] is not None and row['tagged_token2'] is not None and len(row['tagged_token1']) > 0 and len(row['tagged_token2']) > 0:
+                            # POS analysis for tokens
+                            _, _, pos_tok1_count, pos_tok2_count = self.compute_ngrams(
+                                row['tagged_token1'], row['tagged_token2'], 
+                                ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
+                            results[f'pos_tok{n}_cosine'] = self.get_cosine_similarity(pos_tok1_count, pos_tok2_count)
+                        else:
+                            # Set to NaN if either value is NaN
+                            results[f'pos_tok{n}_cosine'] = np.nan
                     
                     # Process if tagged lemma columns exist
                     if all(col in row for col in ['tagged_lemma1', 'tagged_lemma2']):
-                        # POS analysis for lemmas
-                        _, _, pos_lem1_count, pos_lem2_count = self.compute_ngrams(
-                            row['tagged_lemma1'], row['tagged_lemma2'], 
-                            ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
-                        results[f'pos_lem{n}_cosine'] = self.get_cosine_similarity(pos_lem1_count, pos_lem2_count)
+                        if row['tagged_lemma1'] is not None and row['tagged_lemma2'] is not None and len(row['tagged_lemma1']) > 0 and len(row['tagged_lemma2']) > 0:
+                            # POS analysis for lemmas
+                            _, _, pos_lem1_count, pos_lem2_count = self.compute_ngrams(
+                                row['tagged_lemma1'], row['tagged_lemma2'], 
+                                ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
+                            results[f'pos_lem{n}_cosine'] = self.get_cosine_similarity(pos_lem1_count, pos_lem2_count)
+                        else:
+                            # Set to NaN if either value is NaN
+                            results[f'pos_lem{n}_cosine'] = np.nan
                     
                     # Optional Stanford POS tags
                     if add_stanford_tags:
                         if all(col in row for col in ['tagged_stan_token1', 'tagged_stan_token2']):
-                            # Stanford POS analysis for tokens
-                            _, _, stan_tok1_count, stan_tok2_count = self.compute_ngrams(
-                                row['tagged_stan_token1'], row['tagged_stan_token2'], 
-                                ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
-                            results[f'stan_pos_tok{n}_cosine'] = self.get_cosine_similarity(stan_tok1_count, stan_tok2_count)
+                            if row['tagged_stan_token1'] is not None and row['tagged_stan_token2'] is not None and len(row['tagged_stan_token1']) > 0 and len(row['tagged_stan_token2']) > 0:
+                                # Stanford POS analysis for tokens
+                                _, _, stan_tok1_count, stan_tok2_count = self.compute_ngrams(
+                                    row['tagged_stan_token1'], row['tagged_stan_token2'], 
+                                    ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
+                                results[f'stan_pos_tok{n}_cosine'] = self.get_cosine_similarity(stan_tok1_count, stan_tok2_count)
+                            else:
+                                # Set to NaN if either value is NaN
+                                results[f'stan_pos_tok{n}_cosine'] = np.nan
                         
                         if all(col in row for col in ['tagged_stan_lemma1', 'tagged_stan_lemma2']):
-                            # Stanford POS analysis for lemmas
-                            _, _, stan_lem1_count, stan_lem2_count = self.compute_ngrams(
-                                row['tagged_stan_lemma1'], row['tagged_stan_lemma2'], 
-                                ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
-                            results[f'stan_pos_lem{n}_cosine'] = self.get_cosine_similarity(stan_lem1_count, stan_lem2_count)
+                            if row['tagged_stan_lemma1'] is not None and row['tagged_stan_lemma2'] is not None and len(row['tagged_stan_lemma1']) > 0 and len(row['tagged_stan_lemma2']) > 0:
+                                # Stanford POS analysis for lemmas
+                                _, _, stan_lem1_count, stan_lem2_count = self.compute_ngrams(
+                                    row['tagged_stan_lemma1'], row['tagged_stan_lemma2'], 
+                                    ngram_size=n, ignore_duplicates=ignore_duplicates, is_tagged=True)
+                                results[f'stan_pos_lem{n}_cosine'] = self.get_cosine_similarity(stan_lem1_count, stan_lem2_count)
+                            else:
+                                # Set to NaN if either value is NaN
+                                results[f'stan_pos_lem{n}_cosine'] = np.nan
                 
                 # Calculate composite scores
                 # Lexical gets all n-grams (n=1 and above)
