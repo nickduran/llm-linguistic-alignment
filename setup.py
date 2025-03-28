@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="align",
+    name="align_test",
     version="0.2.0",
-    packages=find_packages(),
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
     include_package_data=True,
     install_requires=[
         "pandas",
@@ -17,7 +18,7 @@ setup(
         "python-dotenv",
     ],
     author="Nicholas Duran",
-    author_email="nduran4@asu.com",
+    author_email="nduran4@asu.edu",
     description="A package for linguistic alignment analysis in conversational data",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",

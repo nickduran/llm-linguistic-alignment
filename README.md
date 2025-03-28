@@ -1,5 +1,7 @@
 # ALIGN: A Package for Linguistic Alignment Analysis
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Overview
 
 ALIGN is a Python package designed to extract quantitative, reproducible metrics of linguistic alignment between speakers in conversational data. Linguistic alignment refers to the tendency of speakers to adopt similar linguistic patterns during conversation. This package provides tools to measure alignment at multiple linguistic levels:
@@ -9,6 +11,40 @@ ALIGN is a Python package designed to extract quantitative, reproducible metrics
 - **Syntactic alignment**: Based on part-of-speech patterns
 
 The package is designed to be flexible and extensible, allowing researchers to analyze conversations with different methodologies and compare results across different conversation types. It also includes functionality to generate "surrogate" conversation pairs to establish baseline alignment levels that would occur by chance.
+
+### Repository Structure
+
+The ALIGN package has the following structure:
+
+```
+llm-linguistic-alignment/
+├── src/                      # Source code
+│   └── align_test/           # Core package files
+│       ├── __init__.py
+│       ├── alignment.py
+│       ├── alignment_bert.py
+│       ├── alignment_fasttext.py
+│       ├── alignment_lexsyn.py
+│       ├── bert_model.py
+│       ├── fasttext_model.py
+│       ├── config.py
+│       ├── surrogates.py
+│       └── data/             # Sample data
+│           ├── prepped_stan_small/
+│           │   └── [sample conversation files]
+│           └── prepped_stan_mid/
+│               └── [sample conversation files]
+├── examples/                 # Example usage scripts
+│   ├── basic_usage.py
+│   ├── advanced_usage.py
+│   └── test_package_update.py
+├── README.md
+├── setup.py
+├── requirements.txt
+├── MANIFEST.in
+├── LICENSE
+└── .gitignore
+```
 
 ## Installation
 
@@ -39,16 +75,21 @@ pip install pandas numpy scikit-learn transformers torch gensim nltk tqdm python
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/align.git
-cd align
+git clone https://github.com/your-username/llm-linguistic-alignment.git
+cd llm-linguistic-alignment
 ```
 
-2. Install the package in development mode:
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Install the package in development mode:
 ```bash
 pip install -e .
 ```
 
-Alternatively, you can use the code directly from the cloned repository without installation.
+Alternatively, you can use the code directly from the cloned repository without installation by adding the `src` directory to your Python path.
 
 ## Getting Started
 
@@ -73,12 +114,24 @@ PA:	hi there	["hi", "there"]	["hi", "there"]	[("hi", "UH"), ("there", "RB")]	[("
 PB:	hello how are you	["hello", "how", "are", "you"]	["hello", "how", "be", "you"]	[("hello", "UH"), ("how", "WRB"), ("are", "VBP"), ("you", "PRP")]	[("hello", "UH"), ("how", "WRB"), ("be", "VB"), ("you", "PRP")]
 ```
 
+Sample conversation files are provided in the `src/align_test/data/prepped_stan_small` directory as examples of properly formatted input data. To use your own data, you can:
+
+1. Place your files in one of the existing data directories
+2. Create a new directory for your data
+3. Specify the full path to your data directory when running the analysis
+
 ### Basic Usage
 
 Here's a minimal example to analyze semantic alignment using BERT:
 
 ```python
-from my_package.alignment import LinguisticAlignment
+import sys
+import os
+
+# Add src directory to path (if not installed)
+sys.path.append("path/to/src")
+
+from align_test.alignment import LinguisticAlignment
 
 # Initialize the analyzer
 analyzer = LinguisticAlignment(alignment_type="bert")
@@ -97,7 +150,12 @@ Here's a more comprehensive example showing multiple analysis types and baseline
 
 ```python
 import os
-from my_package.alignment import LinguisticAlignment
+import sys
+
+# Add src directory to path (if not installed)
+sys.path.append("path/to/src")
+
+from align_test.alignment import LinguisticAlignment
 
 # Define paths
 data_path = "path/to/conversation/files"
@@ -105,7 +163,7 @@ output_folder = "path/to/results"
 
 # Initialize with multiple alignment types
 analyzer = LinguisticAlignment(
-    alignment_types=["fasttext", "bert", "lexsyn"],
+    alignment_types=["fasttext", "bert", "lexsyn"],  # Run one or multiple analyzers
     cache_dir=os.path.join(output_folder, "cache")
 )
 
@@ -241,6 +299,16 @@ baseline_results = analyzer.analyze_baseline(
 )
 ```
 
+## Example Scripts
+
+The repository includes example scripts in the `examples/` directory:
+
+- `basic_usage.py`: Simple example of using one analyzer type
+- `advanced_usage.py`: Comprehensive example with multiple analyzers and baseline comparison
+- `test_package_update.py`: More detailed implementation example
+
+These examples are designed to help you understand how to use the package and provide templates for your own analysis scripts.
+
 ## Output Files
 
 ALIGN generates CSV files with detailed alignment metrics:
@@ -281,6 +349,47 @@ analyzer = LinguisticAlignment(
 {
     "huggingface_token": "your_huggingface_token"
 }
+```
+
+## Creating Your Own Analysis Pipeline
+
+To create your own analysis pipeline:
+
+1. Prepare your conversation data in the correct format
+2. Define paths for input and output
+3. Choose the alignment analyzer(s) you want to use
+4. Configure analysis parameters
+5. Run the analysis and examine the output files
+
+Here's a template to get started:
+
+```python
+import os
+import sys
+
+# Add src directory to path (if not installed as a package)
+sys.path.append("path/to/src")
+
+from align_test.alignment import LinguisticAlignment
+
+# Define paths
+data_path = "path/to/your/conversation/data"
+output_folder = "path/to/your/output"
+
+# Initialize the alignment analyzer
+analyzer = LinguisticAlignment(
+    alignment_types=["bert"],  # Choose one or more: "bert", "fasttext", "lexsyn"
+    cache_dir=os.path.join(output_folder, "cache")
+)
+
+# Run the analysis
+results = analyzer.analyze_folder(
+    folder_path=data_path,
+    output_directory=output_folder,
+    lag=1  # Adjust as needed
+)
+
+print(f"Analysis complete. Results saved to {output_folder}")
 ```
 
 ## Detailed API Reference
@@ -348,10 +457,37 @@ If you encounter issues not covered here, please submit an issue on GitHub.
 
 ## License
 
-[Insert your license information here]
+MIT License
+
+Copyright (c) 2023
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## Citation
 
 If you use ALIGN in your research, please cite:
 
-[Insert citation information here]
+```
+@software{align_package,
+  author = {Your Name},
+  title = {ALIGN: A Package for Linguistic Alignment Analysis},
+  year = {2023},
+  url = {https://github.com/your-username/llm-linguistic-alignment}
+}
+```

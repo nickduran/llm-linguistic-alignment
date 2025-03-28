@@ -8,17 +8,17 @@ to analyze semantic alignment using BERT embeddings.
 import os
 import sys
 
-# Add parent directory to path to allow importing from my_package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add src directory to path to allow importing from align_test
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from my_package.alignment import LinguisticAlignment
+from align_test.alignment import LinguisticAlignment
 
 # Define paths for input data and output
 # Using the sample data provided with the package
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
-data_path = os.path.join(project_root, "my_package", "data", "prepped_stan_small")
-output_folder = os.path.join(project_root, "examples", "output")
+data_path = os.path.join(project_root, "src", "align_test", "data", "prepped_stan_small")
+output_folder = os.path.join(current_dir, "output")
 
 # Create output directory if it doesn't exist
 os.makedirs(output_folder, exist_ok=True)
