@@ -331,7 +331,7 @@ ALIGN generates CSV files with detailed alignment metrics:
    - `baseline_alignment_fasttext_lag1_sd3_n2.csv`
    - `baseline_alignment_lexsyn_ngram2_lag1_noDups_noStan.csv`
 
-## Hugging Face Token (Optional)
+## Hugging Face Token (REQUIRED)
 
 For BERT analysis, you can provide a Hugging Face token for accessing models. The token can be provided in several ways:
 
