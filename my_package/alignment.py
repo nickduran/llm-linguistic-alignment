@@ -478,11 +478,72 @@ class LinguisticAlignment:
             
             # Reorder and select only the specified columns
             final_df = renamed_df[final_cols]
-            
+
             # Save the final DataFrame
             os.makedirs(output_directory, exist_ok=True)
-            merged_output_path = os.path.join(output_directory, f"merged_alignment_results_lag{base_df['lag'].iloc[0] if 'lag' in base_df.columns else 1}.csv")
+
+            # Get lag value
+            current_lag = base_df['lag'].iloc[0] if 'lag' in base_df.columns else 1
+
+            # Build filename with parameters from different analyzers
+            filename_parts = [f"merged_lag{current_lag}"]
+
+            # Add lexsyn parameters if present
+            if "lexsyn" in results_dict:
+                # Extract parameters from the first row
+                lexsyn_df = results_dict["lexsyn"]
+                
+                # Try to extract ngram info from column names
+                ngram_cols = [col for col in lexsyn_df.columns if col.startswith('lexical_tok') and col.endswith('_cosine')]
+                max_ngram = 0
+                
+                for col in ngram_cols:
+                    try:
+                        # Extract number from column name (e.g., 'lexical_tok2_cosine' -> 2)
+                        ngram = int(col.replace('lexical_tok', '').replace('_cosine', ''))
+                        max_ngram = max(max_ngram, ngram)
+                    except:
+                        pass
+                
+                if max_ngram > 0:
+                    filename_parts.append(f"ngram{max_ngram}")
+                
+                # Add duplicate and Stanford tag info
+                if any(col.startswith('stan_pos_') for col in lexsyn_df.columns):
+                    filename_parts.append("withStan")
+                else:
+                    filename_parts.append("noStan")
+
+            # Add fasttext parameters if present
+            if "fasttext" in results_dict:
+                # Get high_sd_cutoff and low_n_cutoff from source_file names if available
+                fasttext_files = results_dict["fasttext"]["source_file"].unique() if "source_file" in results_dict["fasttext"].columns else []
+                
+                for file in fasttext_files:
+                    if isinstance(file, str) and "sd" in file and "n" in file:
+                        # Try to extract sd and n values from filename
+                        try:
+                            sd_match = re.search(r'sd(\d+(\.\d+)?)', file)
+                            n_match = re.search(r'n(\d+)', file)
+                            
+                            if sd_match:
+                                filename_parts.append(f"sd{sd_match.group(1)}")
+                            if n_match:
+                                filename_parts.append(f"n{n_match.group(1)}")
+                                
+                            break  # Just use the first file with this information
+                        except:
+                            pass
+
+            # Combine all parts with underscores
+            merged_output_path = os.path.join(output_directory, f"{'-'.join(filename_parts)}.csv")
             final_df.to_csv(merged_output_path, index=False)
             print(f"Merged results from {', '.join(results_dict.keys())} saved to {merged_output_path}")
+
+            # # Save the final DataFrame
+            # os.makedirs(output_directory, exist_ok=True)
+            # merged_output_path = os.path.join(output_directory, f"merged_alignment_results_lag{base_df['lag'].iloc[0] if 'lag' in base_df.columns else 1}.csv")
+            # final_df.to_csv(merged_output_path, index=False)
+            # print(f"Merged results from {', '.join(results_dict.keys())} saved to {merged_output_path}")
         
         return base_df
