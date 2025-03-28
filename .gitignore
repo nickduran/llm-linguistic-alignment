@@ -1,17 +1,20 @@
-
 ## Ignore Mac system
 .DS_Store
+Thumbs.db
 
 ## local testing files
 sandbox/
 
 # Cache directories
 .cache/
-align/examples/output/
-align/examples/output_advanced/
+examples/output/
+examples/output_advanced/
 cache/
-align/cache/
-align/tests/results/
+
+# BERT and FastText model cache
+*.bin
+*.vec
+*.kv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -40,6 +43,12 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
