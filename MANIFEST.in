@@ -1,5 +1,5 @@
 include README.md
 include LICENSE
 include requirements.txt
-recursive-include my_package/data/prepped_stan_small *.txt
-recursive-include my_package/data/prepped_stan_mid *.txt
+recursive-include src/align/data/prepped_stan_small *.txt
+recursive-include src/align/data/prepped_stan_mid *.txt
