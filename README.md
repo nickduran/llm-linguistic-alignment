@@ -36,8 +36,7 @@ llm-linguistic-alignment/
 │               └── [sample conversation files]
 ├── examples/                 # Example usage scripts
 │   ├── basic_usage.py
-│   ├── advanced_usage.py
-│   └── test_package_update.py
+│   └── advanced_usage.py
 ├── README.md
 ├── setup.py
 ├── requirements.txt
@@ -98,12 +97,12 @@ Alternatively, you can use the code directly from the cloned repository without 
 ALIGN expects conversation data in tab-separated text files with the following required columns:
 - `participant`: IDs for the speakers
 - `content`: The text of each utterance
-
-Optional columns that enhance analysis:
 - `token`: Tokenized utterances (list format)
 - `lemma`: Lemmatized tokens (list format)
 - `tagged_token`: Part-of-speech tagged tokens (list of tuples)
 - `tagged_lemma`: Part-of-speech tagged lemmas (list of tuples)
+
+Optional columns that enhance analysis:
 - `tagged_stan_token`: Stanford-format POS tagged tokens (optional)
 - `tagged_stan_lemma`: Stanford-format POS tagged lemmas (optional)
 
@@ -228,6 +227,8 @@ Parameters:
 - `model_name`: BERT model to use (default: "bert-base-uncased")
 - `token`: Hugging Face token (optional)
 
+**Note:** To use BERT analysis, you'll need to set up a Hugging Face token. See the [Setting Up Hugging Face Token](#setting-up-hugging-face-token) section at the end of this README for detailed instructions.
+
 ### 2. Semantic Alignment with FastText
 
 Uses FastText word embeddings to measure semantic similarity:
@@ -242,6 +243,8 @@ Parameters:
 - `low_n_cutoff`: Minimum frequency threshold for filtering rare words
 - `save_vocab`: Whether to save vocabulary lists to output directory
 
+**Note:** When you run FastText analysis for the first time, the package will automatically download the FastText model and embeddings from the official repository. This download (approximately 1-2 GB) may take several minutes depending on your internet connection. The files are cached for future use.
+
 ### 3. Lexical and Syntactic Alignment
 
 Analyzes lexical and syntactic alignment using n-grams:
@@ -252,7 +255,7 @@ analyzer = LinguisticAlignment(alignment_type="lexsyn")
 
 Parameters:
 - `max_ngram`: Maximum n-gram size (default: 2)
-- `ignore_duplicates`: Whether to ignore duplicate n-grams (default: True)
+- `ignore_duplicates`: Whether to ignore duplicate lexical n-grams when computing syntactic alignment (to address "lexical boost" effect)
 - `add_stanford_tags`: Whether to include Stanford POS tags (default: False)
 
 ### 4. Multiple Analysis Types
@@ -284,7 +287,7 @@ baseline_results = analyzer.analyze_baseline(
     input_files="path/to/conversation/files",
     output_directory="path/to/results",
     all_surrogates=False,  # Generate a subset rather than all possible pairs
-    keep_original_turn_order=True
+    keep_original_turn_order=True  # Maintain the sequential order of turns in surrogate conversations
 )
 ```
 
@@ -304,7 +307,6 @@ The repository includes example scripts in the `examples/` directory:
 
 - `basic_usage.py`: Simple example of using one analyzer type
 - `advanced_usage.py`: Comprehensive example with multiple analyzers and baseline comparison
-- `test_package_update.py`: More detailed implementation example
 
 These examples are designed to help you understand how to use the package and provide templates for your own analysis scripts.
 
@@ -349,6 +351,109 @@ analyzer = LinguisticAlignment(
     "huggingface_token": "your_huggingface_token"
 }
 ```
+
+**Important:** For detailed instructions on obtaining and setting up your Hugging Face token, see the [Setting Up Hugging Face Token](#setting-up-hugging-face-token) section at the end of this README.
+
+## Setting Up Hugging Face Token
+
+To use BERT for semantic alignment analysis, you'll need to set up a Hugging Face token. Here's how to do it:
+
+### Step 1: Create a Hugging Face Account
+1. Go to [Hugging Face](https://huggingface.co/) and sign up for an account if you don't have one
+2. Log in to your account
+
+### Step 2: Create an Access Token
+1. Go to your [Hugging Face profile settings](https://huggingface.co/settings/tokens)
+2. Click on "New token"
+3. Give your token a name (e.g., "ALIGN_ACCESS")
+4. Select "read" access
+5. Click "Generate token"
+6. Copy the generated token
+
+### Step 3: Make the Token Available to ALIGN
+
+Choose one of these methods to provide your token:
+
+#### Option A: Environment Variable (Recommended)
+Set an environment variable named `HUGGINGFACE_TOKEN`:
+
+```bash
+# On Linux/Mac
+export HUGGINGFACE_TOKEN="your_token_here"
+
+# On Windows (Command Prompt)
+set HUGGINGFACE_TOKEN=your_token_here
+
+# On Windows (PowerShell)
+$env:HUGGINGFACE_TOKEN="your_token_here"
+```
+
+#### Option B: Config File
+Create a config file at `~/.config/my_package/config.json`:
+
+```bash
+# Create directory if it doesn't exist
+mkdir -p ~/.config/my_package
+```
+
+Then create the file with this content:
+```json
+{
+    "huggingface_token": "your_token_here"
+}
+```
+
+#### Option C: Provide in Code
+Pass the token directly when initializing the analyzer:
+
+```python
+analyzer = LinguisticAlignment(
+    alignment_type="bert",
+    token="your_token_here"
+)
+```
+
+### Step 4: Test Your Setup
+
+Run the basic example to verify your token is working:
+
+```python
+import sys
+import os
+
+# Add src directory to path (if not installed)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+sys.path.append(os.path.join(project_root, "src"))
+
+from align_test.alignment import LinguisticAlignment
+
+# Initialize with token (if not provided via environment variable or config file)
+analyzer = LinguisticAlignment(
+    alignment_type="bert",
+    # token="your_token_here"  # Uncomment if using Option C
+)
+
+# Use included sample data
+data_path = os.path.join(project_root, "src", "align_test", "data", "prepped_stan_small")
+output_folder = "output"
+os.makedirs(output_folder, exist_ok=True)
+
+# Run a test analysis
+try:
+    print("Testing BERT analyzer...")
+    results = analyzer.analyze_folder(
+        folder_path=data_path,
+        output_directory=output_folder,
+        lag=1
+    )
+    print("Success! BERT analyzer is working.")
+except Exception as e:
+    print(f"Error: {str(e)}")
+    print("Please check your Hugging Face token and try again.")
+```
+
+If you encounter the error "401 Client Error: Unauthorized for url...", it means your token is invalid or not properly configured.
 
 ## Creating Your Own Analysis Pipeline
 

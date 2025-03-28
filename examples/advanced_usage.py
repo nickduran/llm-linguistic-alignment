@@ -16,7 +16,7 @@ from align_test.alignment import LinguisticAlignment
 # Define paths for input data and output
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
-data_path = os.path.join(project_root, "src", "align_test", "data", "prepped_stan_small")
+data_path = os.path.join(project_root, "src", "align_test", "data", "prepped_stan_mid")
 output_folder = os.path.join(current_dir, "output_advanced")
 
 # Create output directory if it doesn't exist
