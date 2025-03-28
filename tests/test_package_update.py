@@ -20,13 +20,13 @@ analyzer = LinguisticAlignment(
 
 # Configure parameters for all types of analyzers
 fasttext_params = {
-    "high_sd_cutoff": 2.5,    # Filter out words with frequency > mean + 3*std
+    "high_sd_cutoff": 3,    # Filter out words with frequency > mean + 3*std
     "low_n_cutoff": 2,      # Filter out words occurring < 1 times
     "save_vocab": False      # Save vocabulary lists to output directory
 }
 
 lexsyn_params = {
-    "max_ngram": 4,
+    "max_ngram": 3,
     "ignore_duplicates": False,
     "add_stanford_tags": False
 }
@@ -54,25 +54,25 @@ real_results = analyzer.analyze_folder(
     **lexsyn_params
 )
 
-# Analyze baseline
-baseline_results = analyzer.analyze_baseline(
-    input_files=data_path,
-    output_directory=output_folder,
-    **common_params,
-    **fasttext_params,
-    **lexsyn_params,
-    **surrogate_params  # Add surrogate-specific parameters
-)
+# # Analyze baseline
+# baseline_results = analyzer.analyze_baseline(
+#     input_files=data_path,
+#     output_directory=output_folder,
+#     **common_params,
+#     **fasttext_params,
+#     **lexsyn_params,
+#     **surrogate_params  # Add surrogate-specific parameters
+# )
 
-# Optional: use existing surrogates
-alt_baseline = analyzer.analyze_baseline(
-    input_files=data_path,
-    output_directory=output_folder,
-    use_existing_surrogates=os.path.join(output_folder, "surrogates/surrogate_run-1743180264.262242"),
-    **common_params,
-    **fasttext_params,
-    **lexsyn_params,
-    **surrogate_params
-)
+# # Optional: use existing surrogates
+# alt_baseline = analyzer.analyze_baseline(
+#     input_files=data_path,
+#     output_directory=output_folder,
+#     use_existing_surrogates=os.path.join(output_folder, "surrogates/surrogate_run-1743180264.262242"),
+#     **common_params,
+#     **fasttext_params,
+#     **lexsyn_params,
+#     **surrogate_params
+# )
 
 

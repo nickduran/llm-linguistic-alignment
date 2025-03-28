@@ -56,13 +56,15 @@ class LinguisticAlignment:
         # Store the primary alignment type for backward compatibility
         self.alignment_type = alignment_types[0] if alignment_types else None
     
-    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, 
-                    **kwargs):
+    def analyze_folder(self, folder_path, output_directory=None, file_pattern="*.txt", lag=1, **kwargs):
         """
         Analyze alignment for all text files in a folder
         """
-        print(f"ANALYZE_FOLDER: Processing data from folder: {folder_path}")
+        print(f"ANALYZE_FOLDER: Processing data from folder: {folder_path} with lag={lag}")
         results = {}
+        
+        # Ensure lag parameter is explicitly set in kwargs
+        kwargs['lag'] = lag
         
         for analyzer_type, analyzer in self.analyzers.items():
             # Create analyzer-specific output directory
@@ -74,10 +76,12 @@ class LinguisticAlignment:
             # Filter kwargs to only include relevant parameters for this analyzer
             filtered_kwargs = self._filter_kwargs_for_analyzer(analyzer_type, kwargs)
             
-            # Run analysis with filtered parameters
+            # Run analysis with filtered parameters 
+            # Important: Don't provide output_directory here to prevent duplicate files
             analyzer_results = analyzer.analyze_folder(
                 folder_path=folder_path,
-                output_directory=analyzer_dir,
+                output_directory=None,  # Don't save intermediate results
+                file_pattern=file_pattern,
                 **filtered_kwargs
             )
             
@@ -90,55 +94,53 @@ class LinguisticAlignment:
                 cols_to_remove = [col for col in analyzer_results.columns 
                                 if 'embedding' in col or '_dims' in col]
                 
-                if cols_to_remove:
-                    clean_results = analyzer_results.drop(columns=cols_to_remove, errors='ignore')
-                    
-                    # Create the appropriate filename based on analyzer type
-                    if analyzer_type == "lexsyn":
-                        max_ngram = filtered_kwargs.get('max_ngram', 2)
-                        ignore_duplicates = filtered_kwargs.get('ignore_duplicates', True)
-                        add_stanford_tags = filtered_kwargs.get('add_stanford_tags', False)
-                        dup_str = "noDups" if ignore_duplicates else "withDups"
-                        stan_str = "withStan" if add_stanford_tags else "noStan"
-                        output_path = os.path.join(
-                            analyzer_dir, 
-                            f"lexsyn_alignment_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
-                        )
-                    elif analyzer_type == "fasttext":
-                        high_sd_cutoff = filtered_kwargs.get('high_sd_cutoff', 3)
-                        low_n_cutoff = filtered_kwargs.get('low_n_cutoff', 1)
-                        sd_str = f"sd{high_sd_cutoff}"
-                        n_str = f"n{low_n_cutoff}"
-                        output_path = os.path.join(
-                            analyzer_dir, 
-                            f"semantic_alignment_{analyzer_type}_lag{lag}_{sd_str}_{n_str}.csv"
-                        )
-                    elif analyzer_type == "bert":
-                        model_name = getattr(analyzer, 'model_name', 'bert-base-uncased')
-                        output_path = os.path.join(
-                            analyzer_dir, 
-                            f"semantic_alignment_{model_name}_lag{lag}.csv"
-                        )
-                    else:
-                        output_path = os.path.join(
-                            analyzer_dir, 
-                            f"alignment_{analyzer_type}_lag{lag}.csv"
-                        )
-                    
-                    # Save the clean results
-                    clean_results.to_csv(output_path, index=False)
-                    print(f"Results saved to {output_path}")
+                clean_results = analyzer_results.drop(columns=cols_to_remove, errors='ignore')
+                
+                # Create the appropriate filename based on analyzer type
+                # Use the actual lag value from filtered_kwargs
+                current_lag = filtered_kwargs.get('lag', 1)
+                
+                if analyzer_type == "lexsyn":
+                    max_ngram = filtered_kwargs.get('max_ngram', 2)
+                    ignore_duplicates = filtered_kwargs.get('ignore_duplicates', True)
+                    add_stanford_tags = filtered_kwargs.get('add_stanford_tags', False)
+                    dup_str = "noDups" if ignore_duplicates else "withDups"
+                    stan_str = "withStan" if add_stanford_tags else "noStan"
+                    output_path = os.path.join(
+                        analyzer_dir, 
+                        f"lexsyn_alignment_ngram{max_ngram}_lag{current_lag}_{dup_str}_{stan_str}.csv"
+                    )
+                elif analyzer_type == "fasttext":
+                    high_sd_cutoff = filtered_kwargs.get('high_sd_cutoff', 3)
+                    low_n_cutoff = filtered_kwargs.get('low_n_cutoff', 1)
+                    sd_str = f"sd{high_sd_cutoff}"
+                    n_str = f"n{low_n_cutoff}"
+                    output_path = os.path.join(
+                        analyzer_dir, 
+                        f"semantic_alignment_{analyzer_type}_lag{current_lag}_{sd_str}_{n_str}.csv"
+                    )
+                elif analyzer_type == "bert":
+                    model_name = getattr(analyzer, 'model_name', 'bert-base-uncased')
+                    output_path = os.path.join(
+                        analyzer_dir, 
+                        f"semantic_alignment_{model_name}_lag{current_lag}.csv"
+                    )
                 else:
-                    # If no embedding columns were found, save as is
-                    analyzer_results.to_csv(os.path.join(analyzer_dir, f"alignment_{analyzer_type}_lag{lag}.csv"), index=False)
-                    print(f"Results saved to {os.path.join(analyzer_dir, f'alignment_{analyzer_type}_lag{lag}.csv')}")
+                    output_path = os.path.join(
+                        analyzer_dir, 
+                        f"alignment_{analyzer_type}_lag{current_lag}.csv"
+                    )
+                
+                # Save the clean results
+                clean_results.to_csv(output_path, index=False)
+                print(f"Results saved to {output_path}")
         
         # If only one analyzer, return its results directly
         if len(results) == 1:
             return next(iter(results.values()))
         
-        # Otherwise merge results from multiple analyzers
-        return self._merge_results(results)
+        # Otherwise merge results from multiple analyzers and save to output directory
+        return self._merge_results(results, output_directory)
     
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
                     ignore_duplicates=True, add_stanford_tags=False, **kwargs):
@@ -383,12 +385,13 @@ class LinguisticAlignment:
         
         return filtered_kwargs
 
-    def _merge_results(self, results_dict):
+    def _merge_results(self, results_dict, output_directory=None):
         """
         Merge results from multiple analyzers into a single DataFrame
         
         Args:
             results_dict: Dictionary mapping analyzer type to DataFrame
+            output_directory: Directory to save the merged results (optional)
             
         Returns:
             pd.DataFrame: Merged results
@@ -399,6 +402,15 @@ class LinguisticAlignment:
         # Start with the first dataframe
         analyzer_types = list(results_dict.keys())
         base_df = results_dict[analyzer_types[0]].copy()
+        
+        # Check for row count differences and warn if they exist
+        row_counts = {analyzer: len(df) for analyzer, df in results_dict.items()}
+        if len(set(row_counts.values())) > 1:
+            print("WARNING: Different analyzers returned different numbers of rows:")
+            for analyzer, count in row_counts.items():
+                print(f"  {analyzer}: {count} rows")
+            print("This might be due to different analyzers skipping certain rows based on their specific requirements.")
+            print("(e.g., if a row lacks necessary data for that analyzer)")
         
         # Identify common columns (metadata) that exist in all dataframes
         common_cols = set(base_df.columns)
@@ -417,6 +429,10 @@ class LinguisticAlignment:
             
             # Add unique columns to base dataframe
             for col in unique_cols:
+                # Skip embedding and dimension columns
+                if 'embedding' in col or '_dims' in col:
+                    continue
+                    
                 # Rename similarity columns to include analyzer type
                 if col.endswith('_cosine_similarity'):
                     new_col = f"{analyzer_type}_{col}"
@@ -424,5 +440,17 @@ class LinguisticAlignment:
                 # Add other unique columns directly
                 elif col not in base_df.columns:
                     base_df[col] = df[col]
+        
+        # Ensure no embedding or dimension columns are in the final result
+        cols_to_remove = [col for col in base_df.columns if 'embedding' in col or '_dims' in col]
+        if cols_to_remove:
+            base_df = base_df.drop(columns=cols_to_remove, errors='ignore')
+
+        # Save merged results if output directory is provided
+        if output_directory and not base_df.empty:
+            os.makedirs(output_directory, exist_ok=True)
+            merged_output_path = os.path.join(output_directory, "merged_alignment_results.csv")
+            base_df.to_csv(merged_output_path, index=False)
+            print(f"Merged results from {', '.join(analyzer_types)} saved to {merged_output_path}")
         
         return base_df
