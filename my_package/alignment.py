@@ -64,6 +64,16 @@ class LinguisticAlignment:
         print(f"ANALYZE_FOLDER: Processing data from folder: {folder_path} with lag={lag}")
         results = {}
         
+        # Store user parameters for filename construction
+        user_params = {
+            'lag': lag,
+            'max_ngram': kwargs.get('max_ngram', 2),
+            'ignore_duplicates': kwargs.get('ignore_duplicates', True),
+            'add_stanford_tags': kwargs.get('add_stanford_tags', False),
+            'high_sd_cutoff': kwargs.get('high_sd_cutoff', 3),
+            'low_n_cutoff': kwargs.get('low_n_cutoff', 1)
+        }
+
         # Ensure lag parameter is explicitly set in kwargs
         kwargs['lag'] = lag
         
@@ -141,8 +151,10 @@ class LinguisticAlignment:
             return next(iter(results.values()))
         
         # Otherwise merge results from multiple analyzers and save to output directory
-        return self._merge_results(results, output_directory)
+        merged_results = self._merge_results(results, output_directory, user_params)
     
+        return merged_results
+
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
                     ignore_duplicates=True, add_stanford_tags=False, **kwargs):
         """
@@ -386,13 +398,14 @@ class LinguisticAlignment:
         
         return filtered_kwargs
 
-    def _merge_results(self, results_dict, output_directory=None):
+    def _merge_results(self, results_dict, output_directory=None, user_params=None):
         """
         Merge results from multiple analyzers into a single DataFrame
         
         Args:
             results_dict: Dictionary mapping analyzer type to DataFrame
             output_directory: Directory to save the merged results (optional)
+            user_params: Dictionary of user-specified parameters (optional)
             
         Returns:
             pd.DataFrame: Merged results
@@ -481,66 +494,39 @@ class LinguisticAlignment:
             final_df = renamed_df[final_cols]
 
             # Save the final DataFrame
-            os.makedirs(output_directory, exist_ok=True)
-
-            # Get lag value
-            current_lag = base_df['lag'].iloc[0] if 'lag' in base_df.columns else 1
-
-            # Build filename with parameters from different analyzers
-            filename_parts = [f"merged_lag{current_lag}"]
-
-            # Add lexsyn parameters if present
-            if "lexsyn" in results_dict:
-                # Extract parameters from the first row
-                lexsyn_df = results_dict["lexsyn"]
+            if output_directory and not final_df.empty and user_params:
+                os.makedirs(output_directory, exist_ok=True)
                 
-                # Try to extract ngram info from column names
-                ngram_cols = [col for col in lexsyn_df.columns if col.startswith('lexical_tok') and col.endswith('_cosine')]
-                max_ngram = 0
+                # Build filename with all parameters
+                filename_parts = ["merged"]
                 
-                for col in ngram_cols:
-                    try:
-                        # Extract number from column name (e.g., 'lexical_tok2_cosine' -> 2)
-                        ngram = int(col.replace('lexical_tok', '').replace('_cosine', ''))
-                        max_ngram = max(max_ngram, ngram)
-                    except:
-                        pass
+                # Add lag parameter
+                filename_parts.append(f"lag{user_params.get('lag', 1)}")
                 
-                if max_ngram > 0:
-                    filename_parts.append(f"ngram{max_ngram}")
+                # Add lexsyn parameters if "lexsyn" in analyzer_types
+                if "lexsyn" in analyzer_types:
+                    filename_parts.append(f"ngram{user_params.get('max_ngram', 2)}")
+                    
+                    if user_params.get('add_stanford_tags', False):
+                        filename_parts.append("withStan")
+                    else:
+                        filename_parts.append("noStan")
+                    
+                    if user_params.get('ignore_duplicates', True):
+                        filename_parts.append("noDups")
+                    else:
+                        filename_parts.append("withDups")
                 
-                # Add duplicate and Stanford tag info
-                if any(col.startswith('stan_pos_') for col in lexsyn_df.columns):
-                    filename_parts.append("withStan")
-                else:
-                    filename_parts.append("noStan")
-
-            # Add fasttext parameters if present
-            if "fasttext" in results_dict:
-                # Get high_sd_cutoff and low_n_cutoff from source_file names if available
-                fasttext_files = results_dict["fasttext"]["source_file"].unique() if "source_file" in results_dict["fasttext"].columns else []
+                # Add fasttext parameters if "fasttext" in analyzer_types
+                if "fasttext" in analyzer_types:
+                    filename_parts.append(f"sd{user_params.get('high_sd_cutoff', 3)}")
+                    filename_parts.append(f"n{user_params.get('low_n_cutoff', 1)}")
                 
-                for file in fasttext_files:
-                    if isinstance(file, str) and "sd" in file and "n" in file:
-                        # Try to extract sd and n values from filename
-                        try:
-                            sd_match = re.search(r'sd(\d+(\.\d+)?)', file)
-                            n_match = re.search(r'n(\d+)', file)
-                            
-                            if sd_match:
-                                filename_parts.append(f"sd{sd_match.group(1)}")
-                            if n_match:
-                                filename_parts.append(f"n{n_match.group(1)}")
-                                
-                            break  # Just use the first file with this information
-                        except:
-                            pass
-
-            # Combine all parts with underscores
-            merged_output_path = os.path.join(output_directory, f"{'-'.join(filename_parts)}.csv")
-            final_df.to_csv(merged_output_path, index=False)
-            print(f"Merged results from {', '.join(results_dict.keys())} saved to {merged_output_path}")
-
+                # Combine with dashes
+                merged_output_path = os.path.join(output_directory, f"{'-'.join(filename_parts)}.csv")
+                final_df.to_csv(merged_output_path, index=False)
+                print(f"Merged results from {', '.join(results_dict.keys())} saved to {merged_output_path}")
+    
             # # Save the final DataFrame
             # os.makedirs(output_directory, exist_ok=True)
             # merged_output_path = os.path.join(output_directory, f"merged_alignment_results_lag{base_df['lag'].iloc[0] if 'lag' in base_df.columns else 1}.csv")
