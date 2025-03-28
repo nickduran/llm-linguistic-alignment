@@ -5,8 +5,13 @@
 ## local testing files
 sandbox/
 
-## files that are too large
-align/tests/results
+# Cache directories
+.cache/
+align/examples/output/
+align/examples/output_advanced/
+cache/
+align/cache/
+align/tests/results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
