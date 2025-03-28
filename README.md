@@ -116,9 +116,8 @@ PB:	hello how are you	["hello", "how", "are", "you"]	["hello", "how", "be", "you
 
 Sample conversation files are provided in the `src/align_test/data/prepped_stan_small` directory as examples of properly formatted input data. To use your own data, you can:
 
-1. Place your files in one of the existing data directories
-2. Create a new directory for your data
-3. Specify the full path to your data directory when running the analysis
+1. Create a new directory for your data
+2. Specify the full path to your data directory when running the analysis
 
 ### Basic Usage
 
