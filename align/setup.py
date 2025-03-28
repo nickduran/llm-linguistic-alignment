@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="align",
+    version="0.2.0",
+    packages=find_packages(),
+    include_package_data=True,
+    install_requires=[
+        "pandas",
+        "numpy",
+        "scikit-learn",
+        "transformers",
+        "torch",
+        "gensim",
+        "nltk",
+        "tqdm",
+        "python-dotenv",
+    ],
+    author="Nicholas Duran",
+    author_email="nduran4@asu.com",
+    description="A package for linguistic alignment analysis in conversational data",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/nickduran/llm-linguistic-alignment",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Text Processing :: Linguistic",
+    ],
+    python_requires=">=3.7",
+)
