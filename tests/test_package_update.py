@@ -9,7 +9,7 @@ from my_package.alignment import LinguisticAlignment
 
 # Define path to data folder 
 data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                        "my_package", "data", "prepped_stan_mid")
+                        "my_package", "data", "prepped_stan_small")
 output_folder = "tests/results2"
 
 # Initialize with one or more alignment types ("bert", "fasttext", or "lexsyn")
