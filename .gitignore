@@ -6,10 +6,7 @@
 sandbox/
 
 ## files that are too large
-gensim-data/
-.config/
-tests/results
-tests/results2
+align/tests/results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
