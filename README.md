@@ -196,10 +196,10 @@ real_results = analyzer.analyze_folder(
 # Parameters for surrogate generation
 surrogate_params = {
     "all_surrogates": False,  # Generate a subset rather than all possible pairs
-    "keep_original_turn_order": True,
-    "id_separator": "_",
-    "condition_label": "ExpBlock",  # Part of filename identifying experimental condition
-    "dyad_label": "ASU-"  # Part of filename identifying conversation pair
+    "keep_original_turn_order": True,  # Maintain the sequential order of turns
+    "id_separator": "_",  # Character separating parts of filename
+    "condition_label": "ExpBlock",  # Text prefix identifying experimental conditions
+    "dyad_label": "ASU-"  # Text prefix identifying participant/dyad IDs
 }
 
 # Analyze baseline (chance) alignment with surrogates
@@ -264,8 +264,6 @@ Combine multiple analysis types in one run:
 
 ```python
 analyzer = LinguisticAlignment(alignment_types=["bert", "fasttext", "lexsyn"])
-# Or use all available analyzers
-analyzer = LinguisticAlignment(alignment_types="all")
 ```
 
 ## Lag Parameter
@@ -280,16 +278,73 @@ This allows analysis of alignment patterns at different conversational distances
 
 ## Surrogate Analysis
 
-The package includes functionality to generate "surrogate" conversation pairs to establish baseline levels of alignment that would occur by chance:
+### How Surrogate Generation Works
+
+The surrogate generation process:
+1. Takes participants from two different conversations
+2. Pairs them together to create a new "artificial" conversation
+3. Calculates alignment metrics for these artificial pairs
+4. Uses these measurements as a baseline for chance-level alignment
+
+For this to work properly, the surrogate generator needs to understand your filename structure to identify:
+- Which participants belong to which conversation
+- Which condition each conversation belongs to (as surrogates are only created within the same experimental condition)
+
+### Configuring Surrogate Parameters for Your Dataset
+
+The surrogate generation requires specific parameters that must match your filename structure. These parameters tell the algorithm how to extract participant/dyad IDs and condition information from your filenames.
 
 ```python
-baseline_results = analyzer.analyze_baseline(
-    input_files="path/to/conversation/files",
-    output_directory="path/to/results",
-    all_surrogates=False,  # Generate a subset rather than all possible pairs
-    keep_original_turn_order=True  # Maintain the sequential order of turns in surrogate conversations
-)
+surrogate_params = {
+    "id_separator": "_",  # Character separating parts of filename
+    "dyad_label": "ASU-",  # Text prefix identifying participant/dyad IDs
+    "condition_label": "ExpBlock",  # Text prefix identifying experimental conditions
+    "all_surrogates": False,  # Whether to generate all possible pairs or a subset
+    "keep_original_turn_order": True  # Whether to maintain original sequential turn order
+}
 ```
+
+#### Example Filename Formats and Corresponding Parameters
+
+#### Example 1: Original Format
+Filenames with structure: `ASU-T104_ExpBlock2-TrunkSlide.txt`
+
+Correct parameters:
+
+```python
+surrogate_params = {
+    "id_separator": "_",
+    "dyad_label": "ASU-",
+    "condition_label": "ExpBlock",
+    "all_surrogates": False,
+    "keep_original_turn_order": True
+}
+```
+#### Example 2: Simple Time-Condition Format
+Filenames with structure: `time191-cond1.txt`, `time192-cond1.txt`, etc.
+
+Correct parameters:
+
+```python
+surrogate_params = {
+    "id_separator": "-",
+    "dyad_label": "time",
+    "condition_label": "cond",
+    "all_surrogates": False,
+    "keep_original_turn_order": True
+}
+```
+### Additional Parameters Explained
+
+- **all_surrogates**:
+  - `True`: Generate every possible combination of surrogate pairs (may be very large for big datasets)
+  - `False`: Generate a smaller, representative subset of surrogate pairs
+
+- **keep_original_turn_order**:
+  - `True`: Maintain the sequential order of turns in the surrogate conversations (recommended)
+  - `False`: Randomly shuffle the turns of each participant
+
+### Using Existing Surrogate Files
 
 You can also reuse existing surrogate files:
 
@@ -300,15 +355,6 @@ baseline_results = analyzer.analyze_baseline(
     use_existing_surrogates="path/to/existing/surrogate/files"
 )
 ```
-
-## Example Scripts
-
-The repository includes example scripts in the `examples/` directory:
-
-- `basic_usage.py`: Simple example of using one analyzer type
-- `advanced_usage.py`: Comprehensive example with multiple analyzers and baseline comparison
-
-These examples are designed to help you understand how to use the package and provide templates for your own analysis scripts.
 
 ## Output Files
 
@@ -330,29 +376,6 @@ ALIGN generates CSV files with detailed alignment metrics:
    - `baseline_alignment_bert-base-uncased_lag1.csv`
    - `baseline_alignment_fasttext_lag1_sd3_n2.csv`
    - `baseline_alignment_lexsyn_ngram2_lag1_noDups_noStan.csv`
-
-## Hugging Face Token (REQUIRED)
-
-For BERT analysis, you can provide a Hugging Face token for accessing models. The token can be provided in several ways:
-
-1. Directly in the code:
-```python
-analyzer = LinguisticAlignment(
-    alignment_type="bert",
-    token="your_huggingface_token"
-)
-```
-
-2. As an environment variable `HUGGINGFACE_TOKEN`
-
-3. In a config file at `~/.config/my_package/config.json`:
-```json
-{
-    "huggingface_token": "your_huggingface_token"
-}
-```
-
-**Important:** For detailed instructions on obtaining and setting up your Hugging Face token, see the [Setting Up Hugging Face Token](#setting-up-hugging-face-token) section at the end of this README.
 
 ## Setting Up Hugging Face Token
 
@@ -455,110 +478,6 @@ except Exception as e:
 
 If you encounter the error "401 Client Error: Unauthorized for url...", it means your token is invalid or not properly configured.
 
-## Creating Your Own Analysis Pipeline
-
-To create your own analysis pipeline:
-
-1. Prepare your conversation data in the correct format
-2. Define paths for input and output
-3. Choose the alignment analyzer(s) you want to use
-4. Configure analysis parameters
-5. Run the analysis and examine the output files
-
-Here's a template to get started:
-
-```python
-import os
-import sys
-
-# Add src directory to path (if not installed as a package)
-sys.path.append("path/to/src")
-
-from align_test.alignment import LinguisticAlignment
-
-# Define paths
-data_path = "path/to/your/conversation/data"
-output_folder = "path/to/your/output"
-
-# Initialize the alignment analyzer
-analyzer = LinguisticAlignment(
-    alignment_types=["bert"],  # Choose one or more: "bert", "fasttext", "lexsyn"
-    cache_dir=os.path.join(output_folder, "cache")
-)
-
-# Run the analysis
-results = analyzer.analyze_folder(
-    folder_path=data_path,
-    output_directory=output_folder,
-    lag=1  # Adjust as needed
-)
-
-print(f"Analysis complete. Results saved to {output_folder}")
-```
-
-## Detailed API Reference
-
-### LinguisticAlignment
-
-Main interface class for alignment analysis.
-
-```python
-LinguisticAlignment(
-    alignment_type=None,   # Single alignment type
-    alignment_types=None,  # Multiple alignment types
-    **kwargs               # Additional configuration
-)
-```
-
-#### Methods:
-
-- **analyze_folder**(folder_path, output_directory=None, file_pattern="*.txt", lag=1, **kwargs)
-  
-  Analyze all text files in a folder.
-
-- **analyze_baseline**(input_files, output_directory="results", surrogate_directory=None, use_existing_surrogates=None, **kwargs)
-  
-  Generate surrogate conversation pairs and analyze their alignment as a baseline.
-
-- **process_file**(file_path, lag=1, **kwargs)
-  
-  Process a single file to compute alignment metrics.
-
-### Common Parameters
-
-These parameters can be used across different analyzer types:
-
-- **lag**: Number of turns to lag when pairing utterances (default: 1)
-- **file_pattern**: Pattern to match text files (default: "*.txt")
-- **output_directory**: Directory to save results (optional)
-
-## Caching
-
-ALIGN uses caching to speed up repeated analyses:
-
-1. **Model caching**: BERT and FastText models are cached in the specified `cache_dir`
-2. **Embedding caching**: Computed embeddings are cached to avoid redundant computation
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Missing dependencies**:
-   - Ensure all required packages are installed
-   - For BERT analysis, ensure you have PyTorch installed
-
-2. **File format issues**:
-   - Verify your conversation files are tab-separated
-   - Check that required columns are present and formatted correctly
-
-3. **Memory issues**:
-   - BERT models can use substantial memory; use a smaller model if needed
-   - Process large datasets in smaller batches
-
-### Getting Help
-
-If you encounter issues not covered here, please submit an issue on GitHub.
-
 ## License
 
 MIT License
@@ -582,16 +501,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-## Citation
-
-If you use ALIGN in your research, please cite:
-
-```
-@software{align_package,
-  author = {Your Name},
-  title = {ALIGN: A Package for Linguistic Alignment Analysis},
-  year = {2023},
-  url = {https://github.com/your-username/llm-linguistic-alignment}
-}
-```
