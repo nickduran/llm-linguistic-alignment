@@ -143,7 +143,12 @@ class SemanticAlignmentAnalyzer:
         try:
             # Read the file
             df = pd.read_csv(file_path, sep='\t', encoding='utf-8')
-            
+
+            # Skip if file is empty or has just one row
+            if df.empty or len(df) <= 1:
+                print(f"Skipping invalid file: {file_path}")
+                return pd.DataFrame()
+
             # Check required columns
             if 'content' not in df.columns:
                 print(f"Warning: 'content' column not found in {file_path}")
