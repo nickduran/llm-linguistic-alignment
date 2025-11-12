@@ -5,6 +5,23 @@ Thumbs.db
 ## local testing files
 sandbox/
 
+# ALIGN-specific output files
+output/
+output_*/
+*.csv
+
+# Embedding caches (FastText, BERT)
+*.pkl
+*.pickle
+*_embedding_cache.pkl
+
+# Hugging Face token config
+.config/my_package/config.json
+
+# Surrogate conversation files
+**/surrogate_data/
+**/surrogates/
+
 # Cache directories
 .cache/
 examples/output/
