@@ -15,6 +15,7 @@ setup(
         "gensim",
         "nltk",
         "tqdm",
+        "spacy",
         "python-dotenv",
     ],
     author="Nicholas Duran",
