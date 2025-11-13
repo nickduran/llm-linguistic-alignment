@@ -829,7 +829,7 @@ def prepare_transcripts(input_files,
         # Use provided dictionary or default Gutenberg corpus
         if training_dictionary is None:
             module_path = os.path.dirname(os.path.abspath(__file__))
-            training_dictionary = os.path.join(module_path, 'raw_data/gutenberg.txt')
+            training_dictionary = os.path.join(module_path, 'data/gutenberg.txt')
             
             if not os.path.exists(training_dictionary):
                 print(f"Warning: Default training dictionary not found at {training_dictionary}")
