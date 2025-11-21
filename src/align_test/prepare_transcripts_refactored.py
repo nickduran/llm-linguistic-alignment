@@ -1,5 +1,5 @@
 """
-prepare_transcripts.py - Transcript Preprocessing Module for ALIGN Package
+prepare_transcripts_refactored.py - Transcript Preprocessing Module for ALIGN Package
 
 This module prepares raw conversational transcript files for linguistic alignment analysis.
 It performs text cleaning, tokenization, lemmatization, and part-of-speech tagging.
@@ -42,6 +42,43 @@ try:
 except ImportError:
     SPACY_AVAILABLE = False
 
+def ensure_nltk_resources():
+    """
+    Ensure required NLTK resources are downloaded.
+    
+    Downloads resources automatically if they're not found, so users don't
+    need to manually run nltk.download().
+    """
+    required_resources = [
+        ('tokenizers/punkt', 'punkt'),
+        ('tokenizers/punkt_tab', 'punkt_tab'),
+        ('taggers/averaged_perceptron_tagger', 'averaged_perceptron_tagger'),
+        ('taggers/averaged_perceptron_tagger_eng', 'averaged_perceptron_tagger_eng'),
+        ('corpora/wordnet', 'wordnet'),
+        ('corpora/omw-1.4', 'omw-1.4')  # Required for WordNet lemmatizer
+    ]
+    
+    missing_resources = []
+    
+    for resource_path, resource_name in required_resources:
+        try:
+            nltk.data.find(resource_path)
+        except LookupError:
+            missing_resources.append(resource_name)
+    
+    if missing_resources:
+        print("Downloading required NLTK resources...")
+        for resource in missing_resources:
+            print(f"  - Downloading {resource}...")
+            try:
+                nltk.download(resource, quiet=True)
+                print(f"    ✓ {resource} downloaded successfully")
+            except Exception as e:
+                print(f"    ✗ Failed to download {resource}: {e}")
+        print("NLTK resources ready!\n")
+    else:
+        print("✓ All required NLTK resources are available\n")
+
 
 def InitialCleanup(dataframe,
                    minwords=2,
@@ -81,10 +118,10 @@ def InitialCleanup(dataframe,
     # Internal function: remove fillers via regular expressions
     def applyRegExpression(textFiller):
         # Remove common speech fillers while preserving words like "mom", "am", "ham"
-        textClean = re.sub('^(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]+\s', ' ', textFiller)
-        textClean = re.sub('\s(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]+\s', ' ', textClean)
-        textClean = re.sub('\s(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]$', ' ', textClean)
-        textClean = re.sub('^(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]$', ' ', textClean)
+        textClean = re.sub(r'^(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]+\s', ' ', textFiller)
+        textClean = re.sub(r'\s(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]+\s', ' ', textClean)
+        textClean = re.sub(r'\s(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]$', ' ', textClean)
+        textClean = re.sub(r'^(?!mom|am|ham)[u*|h*|m*|o*|a*]+[m*|h*|u*|a*]$', ' ', textClean)
         return textClean
     
     # Create a new column with only approved text
@@ -471,10 +508,13 @@ def spacy_tag_tokens(tokens, nlp):
         return []
     
     # Create a Doc from pre-tokenized text
-    doc = nlp.tokenizer.tokens_from_list(tokens)
+    from spacy.tokens import Doc
+    doc = Doc(nlp.vocab, words=tokens)
     
-    # Run only the tagger
-    doc = nlp.tagger(doc)
+    # Process through the pipeline to get POS tags
+    # This runs the enabled pipeline components (tagger, etc.)
+    for name, pipe in nlp.pipeline:
+        doc = pipe(doc)
     
     # Return tags in same format as NLTK: [('word', 'TAG'), ...]
     # Use .tag_ for Penn Treebank tags (compatible with NLTK/Stanford)
@@ -813,6 +853,8 @@ def prepare_transcripts(input_files,
     - NLTK + Stanford (with batching): ~20-40 seconds
     """
     
+    ensure_nltk_resources()
+
     # Create output directory if it doesn't exist
     os.makedirs(output_file_directory, exist_ok=True)
     
