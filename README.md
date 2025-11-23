@@ -40,10 +40,7 @@ llm-linguistic-alignment/
 │       ├── surrogates.py
 │       └── data/             # Sample data
 │           ├── gutenberg.txt        # Spell-check corpus
-│           ├── prepped_stan_small/  # Preprocessed samples
-│           │   └── [sample conversation files]
-│           └── prepped_stan_mid/    # Preprocessed samples
-│               └── [sample conversation files]
+│           ├── CHILDES/  # 20 properly formatted input files for preprocessing
 ├── examples/                 # Example usage scripts
 │   ├── basic_usage.py
 │   ├── advanced_usage.py

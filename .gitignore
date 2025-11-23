@@ -3,7 +3,7 @@
 Thumbs.db
 
 ## local testing files
-sandbox/
+sandbox*/
 
 # ALIGN-specific output files
 output/
@@ -193,3 +193,4 @@ cython_debug/
 #.idea/
 
 
+.env
