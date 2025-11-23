@@ -1,5 +1,5 @@
 """
-prepare_transcripts_refactored.py - Transcript Preprocessing Module for ALIGN Package
+prepare_transcripts.py - Transcript Preprocessing Module for ALIGN Package
 
 This module prepares raw conversational transcript files for linguistic alignment analysis.
 It performs text cleaning, tokenization, lemmatization, and part-of-speech tagging.
@@ -14,7 +14,7 @@ Key Features:
 - Output format compatible with alignment analysis
 
 Author: Nicholas Duran
-Modified: 2024 (refactored for improved compatibility and performance)
+Modified: 2025 (refactored for improved compatibility and performance)
 """
 
 import os
