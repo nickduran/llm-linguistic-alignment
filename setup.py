@@ -19,11 +19,11 @@ setup(
         "python-dotenv",
     ],
     author="Nicholas Duran",
-    author_email="nduran4@asu.edu",
+    author_email="nicholas.duran@utexas.edu",
     description="A package for linguistic alignment analysis in conversational data",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/nickduran/llm-linguistic-alignment",
+    url="https://github.com/nickduran/align2-linguistic-alignment",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
