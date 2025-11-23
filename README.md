@@ -31,7 +31,7 @@ llm-linguistic-alignment/
 │       ├── __init__.py
 │       ├── prepare_transcripts.py  # Phase 1: Preprocessing
 │       ├── alignment.py            # Phase 2: Alignment analysis
-│       ├── alignment_bert.py
+│       ├── alignment_bert.py       
 │       ├── alignment_fasttext.py
 │       ├── alignment_lexsyn.py
 │       ├── bert_model.py
@@ -47,7 +47,6 @@ llm-linguistic-alignment/
 ├── examples/                 # Example usage scripts
 │   ├── basic_usage.py
 │   ├── advanced_usage.py
-│   └── preprocessing_example.py  # NEW: Phase 1 example
 ├── README.md
 ├── setup.py
 ├── requirements.txt
