@@ -273,7 +273,6 @@ class SurrogateGenerator:
         else:
             raise ValueError("Failed to create any surrogate files. Check the logs for details.")
 
-
 class SurrogateAlignment:
     """
     Calculates alignment metrics for surrogate pairs to establish baseline levels
@@ -292,7 +291,7 @@ class SurrogateAlignment:
         """
         from .alignment import LinguisticAlignment
         self.alignment = LinguisticAlignment(
-            alignment_type=alignment_type,  # Changed from embedding_model
+            alignment_type=alignment_type,
             model_name=model_name,
             token=token,
             cache_dir=cache_dir
@@ -304,7 +303,8 @@ class SurrogateAlignment:
                         keep_original_turn_order=True, id_separator='-',
                         condition_label='cond', dyad_label='dyad', lag=1, max_ngram=2,
                         high_sd_cutoff=3, low_n_cutoff=1, save_vocab=True,
-                        ignore_duplicates=True, add_stanford_tags=False, **kwargs):
+                        ignore_duplicates=True, add_additional_tags=False, 
+                        additional_tagger_type=None, **kwargs):
         """
         Generate surrogate conversation pairs and analyze their alignment as a baseline
         
@@ -324,7 +324,8 @@ class SurrogateAlignment:
             low_n_cutoff: Minimum frequency cutoff (FastText only)
             save_vocab: Whether to save vocabulary lists (FastText only)
             ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
-            add_stanford_tags: Whether to include Stanford POS tags (default: False)
+            add_additional_tags: Whether to use additional POS tags if available (LexSyn only)
+            additional_tagger_type: Which additional tagger: 'stanford' or 'spacy' (LexSyn only)
             **kwargs: Additional arguments for alignment analysis
             
         Returns:
@@ -395,7 +396,8 @@ class SurrogateAlignment:
             'lag': lag,
             'max_ngram': max_ngram,
             'ignore_duplicates': ignore_duplicates,
-            'add_stanford_tags': add_stanford_tags,
+            'add_additional_tags': add_additional_tags,
+            'additional_tagger_type': additional_tagger_type,
             'save_vocab': save_vocab,
             'high_sd_cutoff': high_sd_cutoff,
             'low_n_cutoff': low_n_cutoff
@@ -420,10 +422,27 @@ class SurrogateAlignment:
             # Add model-specific parameters to filename
             if alignment_type == "lexsyn":
                 dup_str = "noDups" if ignore_duplicates else "withDups"
-                stan_str = "withStan" if add_stanford_tags else "noStan"
+                
+                # Determine tagger string
+                if add_additional_tags:
+                    if additional_tagger_type == 'stanford':
+                        tagger_str = "withStan"
+                    elif additional_tagger_type == 'spacy':
+                        tagger_str = "withSpacy"
+                    else:
+                        # Auto-detect if not specified
+                        if 'tagged_stan_token' in surrogate_results_clean.columns:
+                            tagger_str = "withStan"
+                        elif 'tagged_spacy_token' in surrogate_results_clean.columns:
+                            tagger_str = "withSpacy"
+                        else:
+                            tagger_str = "noAdd"
+                else:
+                    tagger_str = "noAdd"
+                
                 baseline_path = os.path.join(
                     output_directory, 
-                    f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{stan_str}.csv"
+                    f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{lag}_{dup_str}_{tagger_str}.csv"
                 )
             elif alignment_type == "fasttext":
                 sd_str = f"sd{high_sd_cutoff}"
