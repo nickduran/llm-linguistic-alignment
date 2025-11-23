@@ -69,7 +69,8 @@ class LinguisticAlignment:
             'lag': lag,
             'max_ngram': kwargs.get('max_ngram', 2),
             'ignore_duplicates': kwargs.get('ignore_duplicates', True),
-            'add_stanford_tags': kwargs.get('add_stanford_tags', False),
+            'add_additional_tags': kwargs.get('add_additional_tags', False),
+            'additional_tagger_type': kwargs.get('additional_tagger_type', None),
             'high_sd_cutoff': kwargs.get('high_sd_cutoff', 3),
             'low_n_cutoff': kwargs.get('low_n_cutoff', 1)
         }
@@ -168,7 +169,7 @@ class LinguisticAlignment:
         return merged_results
 
     def process_file(self, file_path, lag=1, high_sd_cutoff=3, low_n_cutoff=1, max_ngram=2,
-                    ignore_duplicates=True, add_stanford_tags=False, **kwargs):
+                    ignore_duplicates=True, add_additional_tags=False, additional_tagger_type=None, **kwargs):
         """
         Process a single file to compute alignment metrics
         
@@ -179,7 +180,8 @@ class LinguisticAlignment:
             low_n_cutoff: Minimum frequency cutoff (FastText only)
             max_ngram: Maximum n-gram size to compute (LexSyn only)
             ignore_duplicates: Whether to ignore duplicate n-grams (LexSyn only)
-            add_stanford_tags: Whether to include Stanford POS tags (LexSyn only)
+            add_additional_tags: Whether to include additional POS tags (LexSyn only)
+            additional_tagger_type: Which additional tagger: 'stanford' or 'spacy' (LexSyn only)
             **kwargs: Additional arguments passed to the underlying analyzer
             
         Returns:
@@ -204,7 +206,8 @@ class LinguisticAlignment:
                 lag=lag,
                 max_ngram=max_ngram,
                 ignore_duplicates=ignore_duplicates,
-                add_stanford_tags=add_stanford_tags,
+                add_additional_tags=add_additional_tags,
+                additional_tagger_type=additional_tagger_type,
                 **kwargs
             )
     
@@ -533,10 +536,17 @@ class LinguisticAlignment:
                 if "lexsyn" in analyzer_types:
                     filename_parts.append(f"ngram{user_params.get('max_ngram', 2)}")
                     
-                    if user_params.get('add_stanford_tags', False):
-                        filename_parts.append("withStan")
+                    # Determine tagger string
+                    if user_params.get('add_additional_tags', False):
+                        additional_tagger = user_params.get('additional_tagger_type', None)
+                        if additional_tagger == 'stanford':
+                            filename_parts.append("withStan")
+                        elif additional_tagger == 'spacy':
+                            filename_parts.append("withSpacy")
+                        else:
+                            filename_parts.append("noAdd")
                     else:
-                        filename_parts.append("noStan")
+                        filename_parts.append("noAdd")
                     
                     if user_params.get('ignore_duplicates', True):
                         filename_parts.append("noDups")
