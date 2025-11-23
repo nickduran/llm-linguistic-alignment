@@ -523,8 +523,8 @@ def spacy_tag_tokens(tokens, nlp):
 
 def ApplyPOSTagging(df,
                     filename,
-                    add_stanford_tags=False,
-                    stanford_tagger_type='stanford',
+                    add_additional_tags=False,
+                    tagger_type='stanford',
                     stanford_pos_path=None,
                     stanford_language_path=None,
                     stanford_batch_size=50,
@@ -541,12 +541,13 @@ def ApplyPOSTagging(df,
         Dataframe with 'token' and 'lemma' columns
     filename : str
         Name of source file (added to output)
-    add_stanford_tags : bool, optional
-        Whether to add tagged_stan_* columns (default: False)
-    stanford_tagger_type : str, optional
-        Which tagger to use for tagged_stan_* columns:
-        - 'stanford': Stanford CoreNLP tagger (slow, highest accuracy)
-        - 'spacy': spaCy tagger (100x faster, nearly same accuracy)
+    add_additional_tags : bool, optional
+        Whether to add a second set of POS tags using an alternative tagger
+        (default: False)
+    tagger_type : str, optional
+        Which tagger to use for additional tags:
+        - 'stanford': Stanford CoreNLP tagger → creates tagged_stan_token, tagged_stan_lemma
+        - 'spacy': spaCy tagger → creates tagged_spacy_token, tagged_spacy_lemma
         (default: 'stanford' for backward compatibility)
     stanford_pos_path : str, optional
         Path to Stanford POS tagger directory (required if stanford_tagger_type='stanford')
@@ -562,20 +563,20 @@ def ApplyPOSTagging(df,
     -------
     pd.DataFrame
         Dataframe with POS tagging columns added, all stored as string 
-        representations compatible with ast.literal_eval()
+        representations
         
     Examples
     --------
     # NLTK only (fastest)
-    >>> df = ApplyPOSTagging(df, 'file.txt', add_stanford_tags=False)
+    >>> df = ApplyPOSTagging(df, 'file.txt', add_additional_tags=False)
     
     # NLTK + spaCy (recommended)
-    >>> df = ApplyPOSTagging(df, 'file.txt', add_stanford_tags=True, 
-    ...                      stanford_tagger_type='spacy')
+    >>> df = ApplyPOSTagging(df, 'file.txt', add_additional_tags=True, 
+    ...                      tagger_type='spacy')
     
     # NLTK + Stanford (slowest, highest accuracy)
-    >>> df = ApplyPOSTagging(df, 'file.txt', add_stanford_tags=True,
-    ...                      stanford_tagger_type='stanford',
+    >>> df = ApplyPOSTagging(df, 'file.txt', add_additional_tags=True,
+    ...                      tagger_type='stanford',
     ...                      stanford_pos_path='/path/to/stanford/',
     ...                      stanford_language_path='models/english-left3words-distsim.tagger')
     """
@@ -584,8 +585,8 @@ def ApplyPOSTagging(df,
     stanford_tagger = None
     spacy_nlp = None
     
-    if add_stanford_tags:
-        if stanford_tagger_type == 'stanford':
+    if add_additional_tags:
+        if tagger_type == 'stanford':
             # Validate Stanford parameters
             if stanford_pos_path is None or stanford_language_path is None:
                 raise ValueError(
@@ -639,14 +640,14 @@ def ApplyPOSTagging(df,
                     f"  3. Incompatible Stanford tagger version"
                 )
         
-        elif stanford_tagger_type == 'spacy':
+        elif tagger_type == 'spacy':
             # Initialize spaCy tagger
             print("Initializing spaCy POS tagger...")
             spacy_nlp = initialize_spacy_tagger(spacy_model)
         
         else:
             raise ValueError(
-                f"Invalid stanford_tagger_type: '{stanford_tagger_type}'\n"
+                f"Invalid tagger_type: '{tagger_type}'\n"
                 f"Must be either 'stanford' or 'spacy'"
             )
 
@@ -671,9 +672,9 @@ def ApplyPOSTagging(df,
     )
     print("NLTK POS tagging complete")
     
-    # If desired, add second tagger (Stanford or spaCy)
-    if add_stanford_tags:
-        if stanford_tagger_type == 'stanford':
+    # If desired, add second tagger (Stanford or spaCy) with appropriate column names
+    if add_additional_tags:
+        if tagger_type == 'stanford':
             print(f"Applying Stanford POS tagging with batch processing...")
             print(f"  Batch size: {stanford_batch_size} utterances")
             print(f"  Total utterances: {len(df)}")
@@ -697,26 +698,26 @@ def ApplyPOSTagging(df,
                 df['tagged_stan_token'] = str([])
                 df['tagged_stan_lemma'] = str([])
         
-        elif stanford_tagger_type == 'spacy':
+        elif tagger_type == 'spacy':
             print(f"Applying spaCy POS tagging to {len(df)} utterances...")
             
             try:
                 # Use tqdm for progress indication
                 tqdm.pandas(desc="spaCy tagging tokens")
-                df['tagged_stan_token'] = df['token_obj'].progress_apply(
+                df['tagged_spacy_token'] = df['token_obj'].progress_apply(
                     lambda x: str(spacy_tag_tokens(x, spacy_nlp)) if isinstance(x, list) and x else str([])
                 )
                 
                 tqdm.pandas(desc="spaCy tagging lemmas")
-                df['tagged_stan_lemma'] = df['lemma_obj'].progress_apply(
+                df['tagged_spacy_lemma'] = df['lemma_obj'].progress_apply(
                     lambda x: str(spacy_tag_tokens(x, spacy_nlp)) if isinstance(x, list) and x else str([])
                 )
                 print("spaCy POS tagging complete")
             except Exception as e:
                 print(f"WARNING: spaCy POS tagging failed: {str(e)}")
                 print("Continuing without spaCy tags...")
-                df['tagged_stan_token'] = str([])
-                df['tagged_stan_lemma'] = str([])
+                df['tagged_spacy_token'] = str([])
+                df['tagged_spacy_lemma'] = str([])
     
     # Add filename
     df['file'] = filename
@@ -729,8 +730,11 @@ def ApplyPOSTagging(df,
         'participant', 'content', 'token', 'lemma',
         'tagged_token', 'tagged_lemma'
     ]
-    if add_stanford_tags:
-        column_order.extend(['tagged_stan_token', 'tagged_stan_lemma'])
+    if add_additional_tags:
+        if tagger_type == 'stanford':
+            column_order.extend(['tagged_stan_token', 'tagged_stan_lemma'])
+        elif tagger_type == 'spacy':
+            column_order.extend(['tagged_spacy_token', 'tagged_spacy_lemma'])
     column_order.append('file')
     
     # Only include columns that exist (in case tagging was skipped due to errors)
@@ -747,8 +751,8 @@ def prepare_transcripts(input_files,
                         minwords=2,
                         use_filler_list=None,
                         filler_regex_and_list=False,
-                        add_stanford_tags=False,
-                        stanford_tagger_type='stanford',
+                        add_additional_tags=False,
+                        tagger_type='stanford',
                         stanford_pos_path=None,
                         stanford_language_path=None,
                         stanford_batch_size=50,
@@ -782,18 +786,18 @@ def prepare_transcripts(input_files,
         common fillers (default: None)
     filler_regex_and_list : bool, optional
         If True, use both regex and custom filler list (default: False)
-    add_stanford_tags : bool, optional
-        Whether to add tagged_stan_* columns using an additional tagger
+    add_additional_tags : bool, optional
+        Whether to add a second set of POS tags using an alternative tagger
         (default: False)
-    stanford_tagger_type : str, optional
-        Which tagger to use for tagged_stan_* columns:
-        - 'stanford': Stanford CoreNLP (slow, highest accuracy)
-        - 'spacy': spaCy (100x faster, nearly same accuracy)
+    tagger_type : str, optional
+        Which tagger to use for additional tags:
+        - 'stanford': Stanford CoreNLP → creates tagged_stan_token, tagged_stan_lemma
+        - 'spacy': spaCy → creates tagged_spacy_token, tagged_spacy_lemma
         (default: 'stanford' for backward compatibility)
     stanford_pos_path : str, optional
-        Path to Stanford POS tagger directory (required if stanford_tagger_type='stanford')
+        Path to Stanford POS tagger directory (required if tagger_type='stanford')
     stanford_language_path : str, optional
-        Relative path to Stanford language model (required if stanford_tagger_type='stanford')
+        Relative path to Stanford language model (required if tagger_type='stanford')
         Example: 'models/english-left3words-distsim.tagger'
     stanford_batch_size : int, optional
         Number of utterances to process per batch for Stanford tagging.
@@ -825,16 +829,16 @@ def prepare_transcripts(input_files,
     >>> results = prepare_transcripts(
     ...     input_files="./raw_transcripts",
     ...     output_file_directory="./preprocessed",
-    ...     add_stanford_tags=True,
-    ...     stanford_tagger_type='spacy'
+    ...     add_additional_tags=True,
+    ...     tagger_type='spacy'
     ... )
     
     # With Stanford tagging (slowest, highest accuracy)
     >>> results = prepare_transcripts(
     ...     input_files="./raw_transcripts",
     ...     output_file_directory="./preprocessed",
-    ...     add_stanford_tags=True,
-    ...     stanford_tagger_type='stanford',
+    ...     add_additional_tags=True,
+    ...     tagger_type='stanford',
     ...     stanford_pos_path="/path/to/stanford-postagger-full-2020-11-17/",
     ...     stanford_language_path="models/english-left3words-distsim.tagger"
     ... )
@@ -849,7 +853,6 @@ def prepare_transcripts(input_files,
     Tagging Speed Comparison (per 10,000 words):
     - NLTK only: ~1 second
     - NLTK + spaCy: ~1.3 seconds  
-    - NLTK + Stanford (current): ~100-200 seconds
     - NLTK + Stanford (with batching): ~20-40 seconds
     """
     
@@ -950,8 +953,8 @@ def prepare_transcripts(input_files,
             dataframe = ApplyPOSTagging(
                 dataframe,
                 filename=os.path.basename(fileName),
-                add_stanford_tags=add_stanford_tags,
-                stanford_tagger_type=stanford_tagger_type,
+                add_stanford_tags=add_additional_tags,
+                stanford_tagger_type=tagger_type,
                 stanford_pos_path=stanford_pos_path,
                 stanford_language_path=stanford_language_path,
                 stanford_batch_size=stanford_batch_size,
