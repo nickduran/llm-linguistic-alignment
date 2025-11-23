@@ -110,16 +110,28 @@ class LinguisticAlignment:
                 # Create the appropriate filename based on analyzer type
                 # Use the actual lag value from filtered_kwargs
                 current_lag = filtered_kwargs.get('lag', 1)
-                
                 if analyzer_type == "lexsyn":
                     max_ngram = filtered_kwargs.get('max_ngram', 2)
                     ignore_duplicates = filtered_kwargs.get('ignore_duplicates', True)
-                    add_stanford_tags = filtered_kwargs.get('add_stanford_tags', False)
+                    add_additional_tags = filtered_kwargs.get('add_additional_tags', False)
+                    additional_tagger_type = filtered_kwargs.get('additional_tagger_type', None)
+                    
                     dup_str = "noDups" if ignore_duplicates else "withDups"
-                    stan_str = "withStan" if add_stanford_tags else "noStan"
+                    
+                    # Determine tagger string
+                    if add_additional_tags:
+                        if additional_tagger_type == 'stanford':
+                            tagger_str = "withStan"
+                        elif additional_tagger_type == 'spacy':
+                            tagger_str = "withSpacy"
+                        else:
+                            tagger_str = "noAdd"
+                    else:
+                        tagger_str = "noAdd"
+                    
                     output_path = os.path.join(
                         analyzer_dir, 
-                        f"lexsyn_alignment_ngram{max_ngram}_lag{current_lag}_{dup_str}_{stan_str}.csv"
+                        f"lexsyn_alignment_ngram{max_ngram}_lag{current_lag}_{dup_str}_{tagger_str}.csv"
                     )
                 elif analyzer_type == "fasttext":
                     high_sd_cutoff = filtered_kwargs.get('high_sd_cutoff', 3)
@@ -326,14 +338,27 @@ class LinguisticAlignment:
                 
                 # Add model-specific parameters to filename
                 if analyzer_type == "lexsyn":
-                    max_ngram = analysis_params.get('max_ngram', 2)
-                    ignore_duplicates = analysis_params.get('ignore_duplicates', True)
-                    add_stanford_tags = analysis_params.get('add_stanford_tags', False)
+                    max_ngram = filtered_kwargs.get('max_ngram', 2)
+                    ignore_duplicates = filtered_kwargs.get('ignore_duplicates', True)
+                    add_additional_tags = filtered_kwargs.get('add_additional_tags', False)
+                    additional_tagger_type = filtered_kwargs.get('additional_tagger_type', None)
+                    
                     dup_str = "noDups" if ignore_duplicates else "withDups"
-                    stan_str = "withStan" if add_stanford_tags else "noStan"
+                    
+                    # Determine tagger string
+                    if add_additional_tags:
+                        if additional_tagger_type == 'stanford':
+                            tagger_str = "withStan"
+                        elif additional_tagger_type == 'spacy':
+                            tagger_str = "withSpacy"
+                        else:
+                            tagger_str = "noAdd"
+                    else:
+                        tagger_str = "noAdd"
+                    
                     baseline_path = os.path.join(
                         analyzer_output_dir, 
-                        f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{analysis_params.get('lag', 1)}_{dup_str}_{stan_str}.csv"
+                        f"baseline_alignment_lexsyn_ngram{max_ngram}_lag{analysis_params.get('lag', 1)}_{dup_str}_{tagger_str}.csv"
                     )
                 elif analyzer_type == "fasttext":
                     high_sd_cutoff = analysis_params.get('high_sd_cutoff', 3)
@@ -376,7 +401,8 @@ class LinguisticAlignment:
         fasttext_params = ["model_name", "high_sd_cutoff", "low_n_cutoff", 
                         "save_vocab"]
         
-        lexsyn_params = ["max_ngram", "ignore_duplicates", "add_stanford_tags"]
+        lexsyn_params = ["max_ngram", "ignore_duplicates", "add_additional_tags", 
+                        "additional_tagger_type"]  # UPDATED
         
         # Define surrogate-specific parameters that should be excluded from analyzer calls
         surrogate_params = ["all_surrogates", "keep_original_turn_order", 
