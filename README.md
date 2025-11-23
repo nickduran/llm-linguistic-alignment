@@ -85,7 +85,7 @@ This installs the required packages:
 - python-dotenv
 - spacy
 
-### Step 3: Install the ALIGN Package
+### Step 3: Install the ALIGN 2.0 Package
 
 ```bash
 pip install -e .
