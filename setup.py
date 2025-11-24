@@ -17,6 +17,7 @@ setup(
         "tqdm",
         "spacy",
         "python-dotenv",
+        "matplotlib",
     ],
     author="Nicholas Duran",
     author_email="nicholas.duran@utexas.edu",

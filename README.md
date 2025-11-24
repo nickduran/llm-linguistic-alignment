@@ -1,31 +1,739 @@
-# ALIGN: A Package for Linguistic Alignment Analysis
+# ALIGN 2.0: A Modern Package for Linguistic Alignment Analysis
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> **Note:** This is ALIGN 2.0, a complete revamp of the original ALIGN package. For information about the original version (still available on PyPI), see [original Github repository](https://github.com/nickduran/align-linguistic-alignment) and the [2019 Psychological Methods paper](https://dynamicog.org/publications/journal/25-Duran2019.pdf) by Duran, Paxton, & Fusaroli.
+
 ## Overview
 
-ALIGN is a Python package designed to extract quantitative, reproducible metrics of linguistic alignment between speakers in conversational data. Linguistic alignment refers to the tendency of speakers to adopt similar linguistic patterns during conversation. This package provides a complete pipeline from raw transcripts to detailed alignment metrics:
+ALIGN 2.0 is a comprehensive Python package for measuring **linguistic alignment** in conversational data—the tendency of speakers to adopt similar linguistic patterns during interaction. This package provides flexible tools to quantify alignment at multiple linguistic levels:
 
-**Phase 1: Transcript Preprocessing**
-- Text cleaning and normalization
-- Tokenization and lemmatization
-- Part-of-speech tagging with multiple options (NLTK, spaCy, Stanford)
-- Spell-checking (optional)
-
-**Phase 2: Alignment Analysis**
-- **Semantic alignment**: Using embedding models (BERT or FastText)
-- **Lexical alignment**: Based on repeated words and phrases
+- **Semantic alignment**: Using modern embedding models (BERT or FastText)
+- **Lexical alignment**: Based on repeated words and phrases (n-grams)
 - **Syntactic alignment**: Based on part-of-speech patterns
-- **Baseline generation**: Create surrogate conversation pairs to establish chance-level alignment
 
-The package is designed to be flexible and extensible, allowing researchers to analyze conversations with different methodologies and compare results across different conversation types.
+The package now includes enhanced preprocessing capabilities, support for multiple POS taggers, IMPROVED surrogate generation for baseline comparisons, and increased flexibility for diverse research needs.
 
-### Repository Structure
+---
 
-The ALIGN package has the following structure:
+## 🚀 Quick Start
+
+**New to ALIGN?** The fastest way to get started is through our comprehensive Jupyter notebook tutorials:
+
+1. **[Phase 1 Tutorial: Preprocessing](tutorials/test_comprehensive_prepare.ipynb)**  
+   Learn how to transform raw conversational transcripts into analysis-ready format
+
+2. **[Phase 2 Tutorial: Alignment Analysis](tutorials/test_comprehensive_alignment.ipynb)**  
+   Discover how to measure linguistic alignment at multiple levels
+
+These tutorials provide hands-on, step-by-step guidance using real conversational data and are the recommended starting point for all users.
+
+---
+
+## 📥 Installation
+
+**Important:** ALIGN 2.0 is not yet on PyPI. The [original ALIGN](https://github.com/nickduran/align-linguistic-alignment) remains available there, but to use ALIGN 2.0, you must install from GitHub.
+
+### Prerequisites
+- Python 3.7+ (tested with Python 3.13)
+- pip (Python package installer)
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/nickduran/align2-linguistic-alignment.git
+cd align2-linguistic-alignment
+```
+
+### Step 2: Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3: Install in Editable Mode
+
+This allows you to modify the code and see changes immediately:
+
+```bash
+pip install -e .
+```
+
+---
+
+## 🆕 What's New in ALIGN 2.0
+
+ALIGN 2.0 represents a complete modernization while maintaining compatibility with the original methodology ([Duran, Paxton, & Fusaroli, 2019](https://dynamicog.org/publications/journal/25-Duran2019.pdf). Here's what's different:
+
+
+### Major Enhancements
+
+✅ **Modern language models**: Native integration of BERT for contextualized semantic embeddings—no manual model downloads required
+
+✅ **Dramatically faster processing**: spaCy POS tagging is 100-200x faster than Stanford tagger, with minimal accuracy trade-offs
+
+✅ **Streamlined setup**: No external dependencies to manually download (Stanford tagger optional)—BERT and FastText models download automatically via Hugging Face and Gensim
+
+✅ **Enhanced surrogate generation**: More flexible baseline creation with better control over pairing logic and turn order preservation
+
+✅ **Multiple POS tagger support**: Choose between NLTK, spaCy, or Stanford taggers, or compare them side-by-side in the same analysis
+
+✅ **Robust preprocessing pipeline**: Comprehensive data validation, spell-checking, and cleaning with detailed error messages when issues arise
+
+✅ **Progress visualization**: Real-time progress bars (via tqdm) for all long-running operations—no more wondering if it's working
+
+✅ **Production-ready code**: Full type hints, comprehensive docstrings, and modular architecture for easier extension and debugging
+
+✅ **Interactive tutorials**: Step-by-step Jupyter notebooks with real conversational data to get you started quickly
+
+### Core Methodology Preserved
+
+The fundamental alignment calculations remain consistent with the original ALIGN:
+- Cosine similarity for semantic and lexical alignment
+- N-gram based lexical and syntactic analysis  
+- Surrogate generation for baseline comparisons
+- Turn-by-turn directionality tracking
+- Support for multiple lag values
+
+---
+
+## 📚 Detailed Documentation
+
+### Two-Phase Workflow
+
+ALIGN 2.0 uses a clear two-phase approach:
+
+#### **Phase 1: Preprocessing** (`prepare_transcripts.py`)
+
+Transforms raw conversational data into analysis-ready format:
+
+```python
+from align_test.prepare_transcripts import prepare_transcripts
+
+# Basic usage: NLTK only (fastest, default)
+prepare_transcripts(
+    input_files="path/to/raw/transcripts",           # Directory containing .txt files
+    output_file_directory="path/to/preprocessed",    # Where to save processed files
+    run_spell_check=True,                            # Enable spell-checking
+    minwords=2,                                      # Minimum words per turn
+    use_filler_list=None                             # Use default filler removal
+)
+
+# With spaCy tagging (recommended for speed)
+prepare_transcripts(
+    input_files="path/to/raw/transcripts",
+    output_file_directory="path/to/preprocessed",
+    run_spell_check=True,
+    minwords=2,
+    add_additional_tags=True,                        # Enable additional tagger
+    tagger_type='spacy',                             # Use spaCy for additional tags
+    spacy_model='en_core_web_sm'                     # spaCy model to use
+)
+
+# With Stanford tagging (slowest, most accurate)
+prepare_transcripts(
+    input_files="path/to/raw/transcripts",
+    output_file_directory="path/to/preprocessed",
+    run_spell_check=True,
+    minwords=2,
+    add_additional_tags=True,                        # Enable additional tagger
+    tagger_type='stanford',                          # Use Stanford for additional tags
+    stanford_pos_path="/path/to/stanford-postagger-full-2020-11-17/",
+    stanford_language_path="models/english-left3words-distsim.tagger"
+)
+```
+
+**Important Notes:**
+- Input files **must** be tab-delimited with columns named `participant` and `content`
+- NLTK tagging is always included (base columns: `tagged_token`, `tagged_lemma`)
+- Additional tagger columns are added only if `add_additional_tags=True`:
+  - spaCy: `tagged_spacy_token`, `tagged_spacy_lemma`
+  - Stanford: `tagged_stanford_token`, `tagged_stanford_lemma`
+- Text cleaning (non-ASCII removal, filler removal) happens automatically
+
+**Key Parameters:**
+- `input_files`: Directory path containing raw transcript files
+- `output_file_directory`: Directory where preprocessed files will be saved
+- `run_spell_check`: Enable/disable automatic spell-checking (default: True)
+- `minwords`: Minimum number of words per turn (shorter turns are removed; default: 2)
+- `add_additional_tags`: Add second set of POS tags beyond NLTK (default: False)
+- `tagger_type`: Which additional tagger to use—`'spacy'` or `'stanford'` (default: 'stanford')
+- `use_filler_list`: Custom list of fillers to remove (None = use default regex)
+
+**Output Files:**
+Each conversation produces a processed file with these columns:
+- `participant`: Speaker IDs
+- `content`: Cleaned utterance text
+- `token`: Tokenized words (string representation of list)
+- `lemma`: Lemmatized tokens (string representation of list)
+- `tagged_token`: NLTK POS-tagged tokens (string representation of list of tuples)
+- `tagged_lemma`: NLTK POS-tagged lemmas (string representation of list of tuples)
+- `tagged_spacy_token`: spaCy POS-tagged tokens (if `add_additional_tags=True` and `tagger_type='spacy'`)
+- `tagged_spacy_lemma`: spaCy POS-tagged lemmas (if `add_additional_tags=True` and `tagger_type='spacy'`)
+- `tagged_stanford_token`: Stanford POS-tagged tokens (if `add_additional_tags=True` and `tagger_type='stanford'`)
+- `tagged_stanford_lemma`: Stanford POS-tagged lemmas (if `add_additional_tags=True` and `tagger_type='stanford'`)
+
+---
+
+#### **Phase 2: Alignment Analysis** (`alignment.py`)
+
+Calculates alignment metrics on preprocessed data:
+
+```python
+from align_test.alignment import LinguisticAlignment
+
+# Initialize analyzer
+analyzer = LinguisticAlignment(
+    alignment_types=["bert", "fasttext", "lexsyn"]
+)
+
+# Analyze conversations
+results = analyzer.analyze_folder(
+    folder_path="path/to/preprocessed/files",
+    output_directory="path/to/results",
+    lag=1,
+    # FastText parameters
+    high_sd_cutoff=3,
+    low_n_cutoff=2,
+    # Lexical/syntactic parameters
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,              # Use additional POS tags if available
+    additional_tagger_type="spacy"         # Which additional tagger: 'spacy' or 'stanford'
+)
+```
+
+**Key Parameters:**
+- `lag`: Number of turns between paired utterances (default: 1)
+- `max_ngram`: Maximum n-gram size for lexical/syntactic analysis (default: 2)
+- `ignore_duplicates`: Remove lexical overlap from syntactic patterns (default: True)
+- `add_additional_tags`: Whether to use additional POS tags from preprocessing (default: False)
+- `additional_tagger_type`: Which additional tagger columns to use—`'spacy'` or `'stanford'`
+- `high_sd_cutoff`: FastText high-frequency word filter (default: 3)
+- `low_n_cutoff`: FastText low-frequency word filter (default: 1)
+
+**Note:** The `add_additional_tags` and `additional_tagger_type` parameters tell the analyzer which POS tag columns to use from your preprocessed files. These must match what you created during preprocessing.
+
+---
+
+### Analysis Types
+
+#### 1. Semantic Alignment with BERT
+
+Measures semantic similarity using contextualized embeddings:
+
+```python
+analyzer = LinguisticAlignment(alignment_type="bert")
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="results/",
+    model_name="bert-base-uncased",  # or other BERT variants
+    lag=1
+)
+```
+
+**Setup Required:** See [Hugging Face Token Setup](#-setting-up-hugging-face-token) section below.
+
+**Output:** `semantic_alignment_bert-base-uncased_lag1.csv`
+
+---
+
+#### 2. Semantic Alignment with FastText
+
+Measures semantic similarity using static word embeddings:
+
+```python
+analyzer = LinguisticAlignment(alignment_type="fasttext")
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="results/",
+    model_name="fasttext-wiki-news-300",
+    high_sd_cutoff=3,    # Filter high-frequency words
+    low_n_cutoff=2,      # Filter rare words
+    save_vocab=True,     # Save vocabulary lists
+    lag=1
+)
+```
+
+**Output:** `semantic_alignment_fasttext-wiki-news-300_lag1_sd3_n2.csv`
+
+---
+
+#### 3. Lexical & Syntactic Alignment
+
+Measures word and phrase repetition (lexical) and grammatical structure reuse (syntactic):
+
+```python
+analyzer = LinguisticAlignment(alignment_type="lexsyn")
+
+# Using NLTK tags only
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="results/",
+    max_ngram=3,                      # Analyze uni-, bi-, and trigrams
+    ignore_duplicates=True,           # Remove lexical overlap from syntax
+    add_additional_tags=False,        # Use only NLTK tags
+    lag=1
+)
+
+# Using additional tags (spaCy)
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="results/",
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,         # Use additional tags
+    additional_tagger_type='spacy',   # Specify which additional tagger
+    lag=1
+)
+
+# Using additional tags (Stanford)
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="results/",
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,
+    additional_tagger_type='stanford',
+    lag=1
+)
+```
+
+**Output Filenames:**
+- With NLTK only: `lexsyn_alignment_ngram3_lag1_noDups_noAdd.csv`
+- With spaCy: `lexsyn_alignment_ngram3_lag1_noDups_withSpacy.csv`
+- With Stanford: `lexsyn_alignment_ngram3_lag1_noDups_withStan.csv`
+
+**Key Parameters:**
+- `max_ngram`: Maximum n-gram size (2=bigrams, 3=trigrams, etc.)
+- `ignore_duplicates`: If `True`, removes syntactic patterns that share lexical content
+- `add_additional_tags`: Whether to use additional POS tags (default: False)
+- `additional_tagger_type`: Which additional tagger to use: `'spacy'` or `'stanford'`
+
+---
+
+#### 4. Multiple Analysis Types
+
+Run all analyses together:
+
+```python
+analyzer = LinguisticAlignment(
+    alignment_types=["bert", "fasttext", "lexsyn"]
+)
+
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="results/",
+    lag=1,
+    # FastText-specific
+    high_sd_cutoff=3,
+    low_n_cutoff=2,
+    # Lexsyn-specific
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,
+    additional_tagger_type='spacy'
+)
+```
+
+**Output:** Individual CSV files for each analysis type, plus `merged_alignment_results_lag1.csv`
+
+---
+
+### Understanding the Lag Parameter
+
+The `lag` parameter controls which utterances are paired for alignment calculation:
+
+- `lag=1` (default): Each utterance paired with the immediately following one
+- `lag=2`: Each utterance paired with the utterance 2 positions later
+- `lag=3`: Each utterance paired with the utterance 3 positions later
+
+Example with `lag=1`:
+```
+Turn 1: "I love pizza"              →  paired with → Turn 2: "Me too"
+Turn 2: "Me too"                    →  paired with → Turn 3: "What's your favorite?"
+Turn 3: "What's your favorite?"     →  paired with → Turn 4: "Pepperoni"
+```
+
+This allows analysis of alignment at different conversational distances.
+
+---
+
+## 🎯 Surrogate (Baseline) Analysis
+
+Surrogate analysis creates artificial conversation pairs to establish chance-level baseline alignment. This is crucial for determining whether observed alignment exceeds what would occur randomly.
+
+### How It Works
+
+1. Takes participants from **different** real conversations
+2. Pairs them to create artificial dyads
+3. Calculates alignment metrics for these fabricated pairs
+4. Provides baseline for statistical comparison
+
+### Configuring for Your Dataset
+
+The surrogate generator needs to parse your filenames to identify participants and experimental conditions. Configure these parameters to match your naming scheme:
+
+```python
+from align_test.alignment import LinguisticAlignment
+
+analyzer = LinguisticAlignment(alignment_types=["bert", "lexsyn"])
+
+# Analyze baseline alignment
+baseline_results = analyzer.analyze_baseline(
+    input_files="preprocessed_data/",
+    output_directory="results/baseline/",
+    # Surrogate configuration
+    id_separator="_",                      # Character separating filename parts
+    dyad_label="ASU-",                     # Prefix identifying participant/dyad IDs
+    condition_label="ExpBlock",            # Prefix identifying experimental conditions
+    all_surrogates=False,                  # Generate subset (True = all combinations)
+    keep_original_turn_order=True,         # Maintain sequential turn order (recommended)
+    # Analysis parameters (must match your real data analysis)
+    lag=1,
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,
+    additional_tagger_type='spacy'
+)
+```
+
+### Filename Structure Examples
+
+#### Example 1: Research Lab Format
+Filenames: `ASU-T104_ExpBlock2-TrunkSlide.txt`
+
+```python
+surrogate_params = {
+    "id_separator": "_",
+    "dyad_label": "ASU-",
+    "condition_label": "ExpBlock"
+}
+```
+
+Parsing logic:
+- `ASU-T104` → Dyad ID (T104)
+- `ExpBlock2` → Condition (2)
+- Surrogates only pair participants from same condition
+
+#### Example 2: Simple Format
+Filenames: `dyad23_condition1.txt`
+
+```python
+surrogate_params = {
+    "id_separator": "_",
+    "dyad_label": "dyad",
+    "condition_label": "condition"
+}
+```
+
+#### Example 3: Timestamp Format
+Filenames: `time191-cond1.txt`
+
+```python
+surrogate_params = {
+    "id_separator": "-",
+    "dyad_label": "time",
+    "condition_label": "cond"
+}
+```
+
+### Understanding Surrogate Parameters
+
+- **`all_surrogates`**:
+  - `False`: Generate representative subset (faster, usually sufficient)
+  - `True`: Generate every possible pairing (computationally expensive)
+
+- **`keep_original_turn_order`**:
+  - `True`: Preserve sequential turn order (recommended—maintains temporal structure)
+  - `False`: Randomly shuffle turns (less conservative baseline)
+
+### Reusing Existing Surrogates
+
+If you've already generated surrogate files:
+
+```python
+baseline_results = analyzer.analyze_baseline(
+    input_files="preprocessed_data/",
+    output_directory="results/baseline/",
+    use_existing_surrogates="path/to/surrogate/files/",
+    lag=1,
+    # Include other analysis parameters as needed
+    max_ngram=3,
+    add_additional_tags=True,
+    additional_tagger_type='spacy'
+)
+```
+
+### Output Files
+
+Baseline analysis generates files with `baseline_` prefix:
+- `baseline_alignment_bert-base-uncased_lag1.csv`
+- `baseline_alignment_fasttext_lag1_sd3_n2.csv`
+- `baseline_alignment_lexsyn_ngram3_lag1_noDups_withSpacy.csv`
+
+---
+
+## 📊 Understanding Output Files
+
+### File Naming Convention
+
+ALIGN 2.0 uses descriptive filenames that encode analysis parameters:
+
+**Format:** `[prefix]_alignment_[model]_lag[N]_[params].csv`
+
+Examples:
+- `semantic_alignment_bert-base-uncased_lag1.csv`
+- `semantic_alignment_fasttext-wiki-news-300_lag1_sd3_n2.csv`
+- `lexsyn_alignment_ngram3_lag1_noDups_withSpacy.csv`
+- `baseline_alignment_bert-base-uncased_lag1.csv`
+
+### Output Columns
+
+All alignment result files share these core columns:
+
+| Column | Description |
+|--------|-------------|
+| `file` | Source conversation filename |
+| `order` | Turn sequence number (0-indexed) |
+| `direction` | Who follows whom (e.g., "PA→PB" or "PB→PA") |
+| `participant_lead` | ID of leading speaker |
+| `participant_follow` | ID of following speaker |
+| `turn_lead` | Utterance from leading speaker |
+| `turn_follow` | Utterance from following speaker |
+
+**Alignment scores** (additional columns depend on analysis type):
+- **BERT/FastText**: `semantic_similarity` (range: -1 to 1, typically 0.3-0.9)
+- **Lexical**: `lexical_sim_ngram[N]` for each n-gram size (range: 0-1)
+- **Syntactic**: `syntactic_sim_ngram[N]` for each n-gram size (range: 0-1)
+
+### Merged Output (Multiple Analyzers)
+
+When running multiple analysis types together, ALIGN generates:
+
+`merged_alignment_results_lag[N].csv`
+
+This file combines all alignment metrics in a single row per turn pair, making it easy to:
+- Compare alignment across linguistic levels
+- Perform multi-level statistical modeling
+- Visualize relationships between alignment types
+
+---
+
+## 🔑 Setting Up Hugging Face Token
+
+BERT-based semantic alignment requires a (free) Hugging Face account and access token.
+
+### Step 1: Create Account
+1. Go to [huggingface.co](https://huggingface.co/) and sign up
+2. Log in to your account
+
+### Step 2: Generate Token
+1. Visit [Settings → Access Tokens](https://huggingface.co/settings/tokens)
+2. Click "New token"
+3. Name it (e.g., "ALIGN_ACCESS")
+4. Select "read" permission
+5. Generate and copy the token
+
+### Step 3: Provide Token to ALIGN
+
+Choose one method:
+
+#### Option A: Environment Variable (Recommended)
+
+```bash
+# Linux/Mac
+export HUGGINGFACE_TOKEN="your_token_here"
+
+# Windows Command Prompt
+set HUGGINGFACE_TOKEN=your_token_here
+
+# Windows PowerShell
+$env:HUGGINGFACE_TOKEN="your_token_here"
+```
+
+#### Option B: Configuration File
+
+Create `~/.config/my_package/config.json`:
+
+```json
+{
+    "huggingface_token": "your_token_here"
+}
+```
+
+#### Option C: Pass Directly in Code
+
+```python
+analyzer = LinguisticAlignment(
+    alignment_type="bert",
+    token="your_token_here"
+)
+```
+
+### Testing Your Setup
+
+```python
+from align_test.alignment import LinguisticAlignment
+
+# Test BERT with minimal data
+analyzer = LinguisticAlignment(alignment_type="bert")
+
+# Use any preprocessed conversation files
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_data/",
+    output_directory="test_output/",
+    lag=1
+)
+
+print("✓ BERT analyzer working correctly!")
+```
+
+If you see "401 Client Error: Unauthorized", double-check your token configuration.
+
+---
+
+## 💡 Usage Examples
+
+### Example 1: Basic Semantic Alignment
+
+```python
+from align_test.alignment import LinguisticAlignment
+
+# Simplest possible analysis
+analyzer = LinguisticAlignment(alignment_type="bert")
+
+results = analyzer.analyze_folder(
+    folder_path="preprocessed_conversations/",
+    output_directory="results/",
+    lag=1
+)
+
+print(f"Analyzed {len(results)} conversation files")
+```
+
+---
+
+### Example 2: Complete Multi-Level Analysis with Baselines
+
+```python
+from align_test.alignment import LinguisticAlignment
+
+# Initialize with all analysis types
+analyzer = LinguisticAlignment(
+    alignment_types=["bert", "fasttext", "lexsyn"],
+    cache_dir="cache/"  # Store models here
+)
+
+# Analyze real conversations
+real_results = analyzer.analyze_folder(
+    folder_path="preprocessed_conversations/",
+    output_directory="results/real/",
+    lag=1,
+    # FastText params
+    high_sd_cutoff=3,
+    low_n_cutoff=2,
+    save_vocab=True,
+    # Lexsyn params
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,
+    additional_tagger_type='spacy'
+)
+
+# Generate baseline with surrogates
+baseline_results = analyzer.analyze_baseline(
+    input_files="preprocessed_conversations/",
+    output_directory="results/baseline/",
+    # Surrogate configuration
+    id_separator="_",
+    dyad_label="dyad",
+    condition_label="condition",
+    all_surrogates=False,
+    keep_original_turn_order=True,
+    # Same analysis params as real data
+    lag=1,
+    high_sd_cutoff=3,
+    low_n_cutoff=2,
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,
+    additional_tagger_type='spacy'
+)
+
+print("Analysis complete!")
+print(f"Real conversations: {len(real_results)} files")
+print(f"Baseline surrogates: {len(baseline_results)} files")
+```
+
+---
+
+### Example 3: Comparing Different Lag Values
+
+```python
+from align_test.alignment import LinguisticAlignment
+
+analyzer = LinguisticAlignment(alignment_type="lexsyn")
+
+# Analyze at different conversational distances
+for lag_value in [1, 2, 3]:
+    print(f"Analyzing with lag={lag_value}...")
+    
+    results = analyzer.analyze_folder(
+        folder_path="preprocessed_conversations/",
+        output_directory=f"results/lag{lag_value}/",
+        lag=lag_value,
+        max_ngram=2,
+        add_additional_tags=True,
+        additional_tagger_type='spacy'
+    )
+    
+    print(f"  → Saved to results/lag{lag_value}/")
+```
+
+---
+
+### Example 4: Complete Preprocessing and Analysis Workflow
+
+```python
+from align_test.prepare_transcripts import prepare_transcripts
+from align_test.alignment import LinguisticAlignment
+
+# Step 1: Preprocess with spaCy tagging
+print("Preprocessing conversations...")
+prepare_transcripts(
+    input_files="raw_transcripts/",
+    output_file_directory="preprocessed/",
+    run_spell_check=True,
+    minwords=2,
+    add_additional_tags=True,
+    tagger_type='spacy',
+    spacy_model='en_core_web_sm'
+)
+
+# Step 2: Analyze with multiple alignment types
+print("\nAnalyzing alignment...")
+analyzer = LinguisticAlignment(alignment_types=["bert", "lexsyn"])
+
+results = analyzer.analyze_folder(
+    folder_path="preprocessed/",
+    output_directory="results/",
+    lag=1,
+    max_ngram=3,
+    ignore_duplicates=True,
+    add_additional_tags=True,
+    additional_tagger_type='spacy'
+)
+
+print(f"\n✓ Complete! Analyzed {len(results)} files")
+```
+
+---
+
+## 📁 Repository Structure
 
 ```
-llm-linguistic-alignment/
+align2-linguistic-alignment/
 ├── src/                      # Source code
 │   └── align_test/           # Core package files
 │       ├── __init__.py
@@ -38,787 +746,176 @@ llm-linguistic-alignment/
 │       ├── fasttext_model.py
 │       ├── config.py
 │       ├── surrogates.py
-│       └── data/             # Sample data
-│           ├── gutenberg.txt        # Spell-check corpus
-│           ├── CHILDES/  # 20 properly formatted input files for preprocessing
-├── examples/                 # Example usage scripts
-│   ├── basic_usage.py
-│   ├── advanced_usage.py
+│       └── data/               # Sample data
+│           ├── gutenberg.txt   # Spell-check corpus
+│           ├── CHILDES/        # 20 properly formatted input files for preprocessing
+├── tutorials/                # Example usage scripts
+│   ├── TUTORIAL_README.md
+|   ├── tutorial_1_preprocessing.ipynb
+|   ├── tutorial_2_alignment.ipynb
+│   ├── tutorial_3_baseline.ipynb
 ├── README.md
 ├── setup.py
 ├── requirements.txt
 ├── MANIFEST.in
 ├── LICENSE
-└── .gitignore
 ```
-
-## Installation
-
-### Prerequisites
-
-- Python 3.7+
-- pip (Python package installer)
-- Java 8+ (only required if using Stanford POS tagger)
-
-### Step 1: Clone Repository
-
-```bash
-git clone https://github.com/your-username/llm-linguistic-alignment.git
-cd llm-linguistic-alignment
-```
-
-### Step 2: Install Core Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-This installs the required packages:
-- pandas
-- numpy
-- scikit-learn
-- transformers
-- torch
-- gensim
-- nltk
-- tqdm
-- python-dotenv
-- spacy
-
-### Step 3: Install the ALIGN 2.0 Package
-
-```bash
-pip install -e .
-```
-
-This installs the package in development/editable mode, meaning any changes you make to the source code will be immediately reflected without reinstalling.
-<!-- 
-### Step 4 (Optional): Set Up Stanford POS Tagger
-
-**Only required if you want to use Stanford POS tagger** (slowest but highest accuracy option):
-
-1. Download the Stanford POS Tagger from: https://nlp.stanford.edu/software/tagger.shtml#Download
-   - Recommended version: `stanford-postagger-full-2020-11-17.zip`
-
-2. Extract the downloaded file to a location on your computer:
-   ```bash
-   # Example on Linux/Mac:
-   unzip stanford-postagger-full-2020-11-17.zip -d ~/tools/
-   
-   # Example on Windows:
-   # Extract to C:\tools\stanford-postagger-full-2020-11-17\
-   ```
-
-3. Note the full path to the extracted directory. You'll need to provide two paths when using Stanford:
-   - **Base directory path**: `/path/to/stanford-postagger-full-2020-11-17/`
-   - **Language model path**: `models/english-left3words-distsim.tagger` (relative to base)
-
-4. Verify Java is installed:
-   ```bash
-   java -version
-   # Should show Java 8 or higher
-   ```
-
-**Note**: Most users won't need Stanford tagger. spaCy provides nearly identical accuracy (97.2% vs 97.4%) with 100x better speed. -->
-
-
-## Getting Started
-
-ALIGN provides a two-phase workflow for analyzing linguistic alignment in conversations:
-
-1. **Phase 1: Preprocessing** - Convert raw transcripts to analysis-ready format
-2. **Phase 2: Alignment Analysis** - Calculate alignment metrics and baselines
-
-### Phase 1: Preprocessing Raw Transcripts
-
-The first step is to preprocess your raw conversation transcripts. This prepares them for alignment analysis by cleaning text, tokenizing, lemmatizing, and adding part-of-speech tags.
-
-#### Input Format for Raw Transcripts
-
-Your raw transcript files should be **tab-separated text files** with two columns:
-
-```
-participant	content
-Speaker1	Hello, how are you doing today?
-Speaker2	I'm doing great, thanks for asking!
-Speaker1	That's wonderful to hear.
-Speaker2	How about you?
-```
-
-**Requirements**:
-- **Tab-delimited** (not comma-separated)
-- **UTF-8 encoding**
-- **Column headers**: `participant` and `content`
-- **One turn per row**
-- **Chronological order** (rows should represent the temporal sequence of conversation)
-
-**Filename Convention**:
-Each conversation file should be named with identifiable components for dyad and condition:
-- Example: `time200-cond1.txt`, `dyad5-condition2.txt`, `ASU-T104_ExpBlock2.txt`
-- The filename format should be consistent across all files
-- This matters later for surrogate generation (Phase 2)
-
-#### Basic Preprocessing Example
-
-Here's the simplest way to preprocess your transcripts:
-
-```python
-from align_test.prepare_transcripts import prepare_transcripts
-
-# Preprocess all .txt files in a directory
-results = prepare_transcripts(
-    input_files="./raw_transcripts",      # Directory with your raw transcript files
-    output_file_directory="./preprocessed" # Where to save processed files
-)
-
-print(f"Preprocessed {len(results)} utterances!")
-```
-
-**What this does**:
-1. Cleans text (removes non-alphabetic characters, fillers like "um", "uh")
-2. Merges adjacent turns by the same speaker
-3. Performs spell-checking using Bayesian algorithm
-4. Tokenizes text (expands contractions, splits into words)
-5. Lemmatizes tokens (converts words to base forms)
-6. Applies NLTK POS tagging
-7. Saves processed files ready for alignment analysis
-
-**Output**: Processed files with columns: `participant`, `content`, `token`, `lemma`, `tagged_token`, `tagged_lemma`, `file`
-
-#### Recommended Preprocessing with spaCy
-
-For better POS tagging accuracy with minimal speed impact, use spaCy:
-
-```python
-from align_test.prepare_transcripts import prepare_transcripts
-
-results = prepare_transcripts(
-    input_files="./raw_transcripts",
-    output_file_directory="./preprocessed",
-    add_stanford_tags=True,           # Add advanced POS tagging
-    stanford_tagger_type='spacy'      # Use spaCy (100x faster than Stanford)
-)
-```
-
-**What this adds**:
-- Additional POS tags using spaCy's neural tagger
-- Columns: `tagged_stan_token` and `tagged_stan_lemma` (for syntactic alignment analysis)
-- Processing time: Only ~30% slower than NLTK-only mode
-- Accuracy: 97.2% (vs 96.5% for NLTK, 97.4% for Stanford)
-
-**When to use**: Recommended for most users who want syntactic alignment analysis
-
-#### Advanced Preprocessing Options
-
-**Disable spell-checking** (faster processing):
-```python
-results = prepare_transcripts(
-    input_files="./raw_transcripts",
-    output_file_directory="./preprocessed",
-    run_spell_check=False  # Skip spell-checking
-)
-```
-
-**Custom filler word removal**:
-```python
-results = prepare_transcripts(
-    input_files="./raw_transcripts",
-    output_file_directory="./preprocessed",
-    use_filler_list=["um", "uh", "like", "you know"],  # Custom filler words
-    filler_regex_and_list=True  # Use both regex and custom list
-)
-```
-
-**Adjust minimum turn length**:
-```python
-results = prepare_transcripts(
-    input_files="./raw_transcripts",
-    output_file_directory="./preprocessed",
-    minwords=3  # Require at least 3 words per turn (default: 2)
-)
-```
-
-**Custom spell-check dictionary**:
-```python
-results = prepare_transcripts(
-    input_files="./raw_transcripts",
-    output_file_directory="./preprocessed",
-    training_dictionary="./my_domain_corpus.txt"  # Use domain-specific dictionary
-)
-```
-
-#### Using Stanford POS Tagger (Advanced)
-
-**Only recommended if you need maximum accuracy and can tolerate slow processing** (~2 hours for 100 conversations vs ~1 minute with spaCy).
-
-**Prerequisites**:
-1. Download Stanford POS Tagger: https://nlp.stanford.edu/software/tagger.shtml#Download
-2. Extract to a directory (e.g., `/home/user/tools/stanford-postagger-full-2020-11-17/`)
-3. Verify Java is installed: `java -version`
-
-**Understanding the Stanford Paths**:
-
-The Stanford tagger requires two path parameters:
-
-1. **`stanford_pos_path`**: The **full path to the Stanford tagger directory** 
-   - This is the folder you extracted from the download
-   - Should contain `stanford-postagger.jar` and a `models/` subdirectory
-   - Example: `/home/user/tools/stanford-postagger-full-2020-11-17/`
-   - **Important**: Include the trailing slash `/`
-
-2. **`stanford_language_path`**: The **relative path to the language model file**
-   - This path is relative to `stanford_pos_path`
-   - For English, use: `models/english-left3words-distsim.tagger`
-   - The full path will be: `stanford_pos_path` + `stanford_language_path`
-   - Example full path: `/home/user/tools/stanford-postagger-full-2020-11-17/models/english-left3words-distsim.tagger`
-
-**Visual Guide**:
-```
-stanford-postagger-full-2020-11-17/     ← stanford_pos_path points here
-├── stanford-postagger.jar              ← Must be here
-├── models/                             ← Contains language models
-│   ├── english-left3words-distsim.tagger  ← stanford_language_path points here (relative)
-│   ├── english-bidirectional-distsim.tagger
-│   └── ... (other language models)
-├── LICENSE.txt
-└── README.txt
-```
-
-**Example Usage**:
-
-```python
-results = prepare_transcripts(
-    input_files="./raw_transcripts",
-    output_file_directory="./preprocessed",
-    add_stanford_tags=True,
-    stanford_tagger_type='stanford',
-    
-    # Path to Stanford directory (include trailing slash for clarity)
-    stanford_pos_path="/home/user/tools/stanford-postagger-full-2020-11-17/",
-    
-    # Relative path to language model (from stanford_pos_path)
-    stanford_language_path="models/english-left3words-distsim.tagger",
-    
-    # Optional: Adjust batch size (larger = faster but more memory)
-    stanford_batch_size=50  # Process 50 utterances at a time
-)
-```
-
-**Platform-Specific Examples**:
-
-```python
-# Linux/Mac:
-stanford_pos_path="/home/username/tools/stanford-postagger-full-2020-11-17/"
-
-# Windows:
-stanford_pos_path="C:/tools/stanford-postagger-full-2020-11-17/"
-# or
-stanford_pos_path="C:\\tools\\stanford-postagger-full-2020-11-17\\"
-```
-
-**Performance Tips for Stanford**:
-- Use `stanford_batch_size=100` if you have 8GB+ RAM (faster)
-- Use `stanford_batch_size=25` if you have limited RAM (~4GB)
-- Default of 50 works well for most systems
-
-**Troubleshooting Stanford Setup**:
-
-If you get an error like `FileNotFoundError: Stanford model not found`, verify:
-
-```python
-import os
-
-# Check your paths
-stanford_pos_path = "/home/user/tools/stanford-postagger-full-2020-11-17/"
-stanford_language_path = "models/english-left3words-distsim.tagger"
-
-# These should both be True:
-model_full_path = os.path.join(stanford_pos_path, stanford_language_path)
-jar_full_path = os.path.join(stanford_pos_path, "stanford-postagger.jar")
-
-print(f"Model exists: {os.path.exists(model_full_path)}")
-print(f"JAR exists: {os.path.exists(jar_full_path)}")
-
-# If False, adjust your paths
-```
-
-#### Choosing a POS Tagger: Speed vs Accuracy
-
-| Tagger | Processing Time* | Accuracy | Best For | Setup Required |
-|--------|-----------------|----------|----------|----------------|
-| **NLTK only** | ~30 seconds | 96.5% | Quick analysis, lexical alignment only | None |
-| **NLTK + spaCy** ⭐ | ~1 minute | 97.2% | **Most users** (great speed/accuracy balance) | `spacy download` |
-| **NLTK + Stanford** | ~1.5-2 hours | 97.4% | Maximum accuracy needed | Manual download + Java |
-
-*For 100 conversations with ~50 utterances each (5,000 total utterances)
-
-**Recommendation**: Use **spaCy** unless you have a specific need for the absolute highest accuracy. The 0.2% accuracy difference is negligible for most research purposes, while the 100x speedup is substantial.
-
-#### Complete Preprocessing Example
-
-```python
-from align_test.prepare_transcripts import prepare_transcripts
-
-# Full preprocessing with all options demonstrated
-results = prepare_transcripts(
-    # Input/Output
-    input_files="./raw_transcripts",           # Directory containing raw .txt files
-    output_file_directory="./preprocessed",     # Where to save processed files
-    
-    # Text Cleaning
-    minwords=2,                                 # Minimum words per turn (default: 2)
-    use_filler_list=None,                       # Use default regex filler removal
-    filler_regex_and_list=False,                # Don't combine regex + custom list
-    
-    # Spell-Checking
-    run_spell_check=True,                       # Enable spell-checking (default: True)
-    training_dictionary=None,                   # Use default Gutenberg corpus
-    
-    # POS Tagging (RECOMMENDED: Use spaCy)
-    add_stanford_tags=True,                     # Add advanced POS tags
-    stanford_tagger_type='spacy',               # Use spaCy (fast and accurate)
-    spacy_model='en_core_web_sm',              # spaCy model to use
-    
-    # File Handling
-    input_as_directory=True,                    # Read all .txt files from directory
-    save_concatenated_dataframe=True            # Save combined output file
-)
-
-print(f"Successfully preprocessed {len(results)} utterances!")
-print(f"Output files saved to: ./preprocessed")
-print(f"Ready for alignment analysis!")
-```
-
-#### Output Files from Preprocessing
-
-After running `prepare_transcripts()`, you'll have:
-
-1. **Individual processed files** (one per input file):
-   - `preprocessed/time200-cond1.txt`
-   - `preprocessed/time210-cond1.txt`
-   - Each contains all columns needed for alignment analysis
-
-2. **Concatenated file** (optional, if `save_concatenated_dataframe=True`):
-   - `preprocessed/align_concatenated_dataframe.txt`
-   - Combines all conversations into a single file
-
-**Example processed file structure**:
-```
-participant	content	token	lemma	tagged_token	tagged_lemma	tagged_stan_token	tagged_stan_lemma	file
-cgv	okay	"['okay']"	"['okay']"	"[('okay', 'UH')]"	"[('okay', 'UH')]"	"[('okay', 'UH')]"	"[('okay', 'UH')]"	time200-cond1.txt
-kid	im sitting over here	"['im', 'sitting', 'over', 'here']"	"['im', 'sit', 'over', 'here']"	"[('im', 'VBP'), ('sitting', 'VBG'), ('over', 'IN'), ('here', 'RB')]"	...
-```
-
-**Note**: All list and tuple columns are stored as string representations (e.g., `"['word1', 'word2']"`) that can be parsed with Python's `ast.literal_eval()`. This format is required for compatibility with the alignment analysis phase.
 
 ---
 
-### Phase 2: Analyzing Alignment in Preprocessed Data
+## 🔬 Methodological Notes
 
-Once you've preprocessed your transcripts (Phase 1), you can analyze linguistic alignment using the preprocessed files.
+### Alignment Calculation
 
-#### Data Format Expected by Alignment Analysis
+ALIGN 2.0 uses **cosine similarity** to measure alignment across all linguistic levels:
 
-The alignment analysis phase expects preprocessed files with these columns:
-- `participant`: IDs for the speakers
-- `content`: The cleaned text of each utterance
-- `token`: Tokenized utterances (list format stored as string)
-- `lemma`: Lemmatized tokens (list format stored as string)
-- `tagged_token`: Part-of-speech tagged tokens (list of tuples stored as string)
-- `tagged_lemma`: Part-of-speech tagged lemmas (list of tuples stored as string)
+- **Semantic (BERT/FastText)**: Cosine similarity between utterance embeddings
+- **Lexical**: Cosine similarity between n-gram frequency vectors
+- **Syntactic**: Cosine similarity between POS n-gram frequency vectors
 
-Optional columns that enhance syntactic alignment analysis:
-- `tagged_stan_token`: Advanced POS tagged tokens (from spaCy or Stanford)
-- `tagged_stan_lemma`: Advanced POS tagged lemmas (from spaCy or Stanford)
+**Why cosine similarity?**
+1. **Interpretable**: Values from -1 to 1 (or 0 to 1 for n-grams)
+2. **Length-normalized**: Controls for utterance length differences
+3. **Established**: Widely used in NLP and information retrieval
+4. **Consistent**: Same metric across all linguistic levels
 
-**Note**: If you preprocessed your data using Phase 1 above, your files are already in the correct format! If you're using pre-existing data, ensure it matches this format.
+### Directionality
 
-Sample preprocessed files are provided in the `src/align_test/data/prepped_stan_small` directory as examples.
+ALIGN tracks alignment directionality separately:
+- **PA→PB**: How much does PB align with PA?
+- **PB→PA**: How much does PA align with PB?
 
-#### Basic Alignment Analysis
+This allows research on:
+- Leader-follower dynamics
+- Power relationships
+- Conversational roles
 
-Here's a minimal example to analyze semantic alignment using BERT:
+### Statistical Considerations
 
-### Basic Usage
+When comparing real vs. baseline alignment:
 
-Here's a minimal example to analyze semantic alignment using BERT:
+1. **Match parameters**: Use identical settings for real and surrogate analyses
+2. **Aggregate appropriately**: Consider conversation-level or turn-level aggregation
+3. **Account for non-independence**: Turns within conversations are related
+4. **Use mixed-effects models**: Account for random effects (e.g., dyad, individual)
 
-```python
-import sys
-import os
+Example statistical approach:
+```R
+# In R with lme4
+library(lme4)
 
-# Add src directory to path (if not installed)
-sys.path.append("path/to/src")
-
-from align_test.alignment import LinguisticAlignment
-
-# Initialize the analyzer
-analyzer = LinguisticAlignment(alignment_type="bert")
-
-# Analyze a folder of conversation files
-results = analyzer.analyze_folder(
-    folder_path="path/to/your/conversation/files",
-    output_directory="path/to/save/results",
-    lag=1  # Number of turns to lag (default: 1)
+model <- lmer(
+    alignment ~ data_type * condition + (1|dyad) + (1|turn_order),
+    data = combined_data
 )
 ```
 
-### Comprehensive Example
+---
 
-Here's a more comprehensive example showing multiple analysis types and baseline comparison:
+## 📖 Citation
 
-```python
-import os
-import sys
+If you use ALIGN 2.0 in your research, please cite the original methodology paper:
 
-# Add src directory to path (if not installed)
-sys.path.append("path/to/src")
-
-from align_test.alignment import LinguisticAlignment
-
-# Define paths
-data_path = "path/to/conversation/files"
-output_folder = "path/to/results"
-
-# Initialize with multiple alignment types
-analyzer = LinguisticAlignment(
-    alignment_types=["fasttext", "bert", "lexsyn"],  # Run one or multiple analyzers
-    cache_dir=os.path.join(output_folder, "cache")
-)
-
-# Configure parameters for FastText
-fasttext_params = {
-    "high_sd_cutoff": 3,    # Filter out words with frequency > mean + 3*std
-    "low_n_cutoff": 2,      # Filter out words occurring < 2 times
-    "save_vocab": True      # Save vocabulary lists to output directory
-}
-
-# Configure parameters for Lexical/Syntactic analysis
-lexsyn_params = {
-    "max_ngram": 3,         # Maximum n-gram size
-    "ignore_duplicates": True,
-    "add_stanford_tags": True  # Include Stanford POS tags if available
-}
-
-# Common parameters for all analyzers
-common_params = {
-    "lag": 1  # Number of turns to lag
-}
-
-# Analyze real conversations
-real_results = analyzer.analyze_folder(
-    folder_path=data_path,
-    output_directory=output_folder,
-    **common_params,
-    **fasttext_params,
-    **lexsyn_params
-)
-
-# Parameters for surrogate generation
-surrogate_params = {
-    "all_surrogates": False,  # Generate a subset rather than all possible pairs
-    "keep_original_turn_order": True,  # Maintain the sequential order of turns
-    "id_separator": "_",  # Character separating parts of filename
-    "condition_label": "ExpBlock",  # Text prefix identifying experimental conditions
-    "dyad_label": "ASU-"  # Text prefix identifying participant/dyad IDs
-}
-
-# Analyze baseline (chance) alignment with surrogates
-baseline_results = analyzer.analyze_baseline(
-    input_files=data_path,
-    output_directory=output_folder,
-    **common_params,
-    **fasttext_params,
-    **lexsyn_params,
-    **surrogate_params
-)
-```
-
-## Analysis Types
-
-### 1. Semantic Alignment with BERT
-
-Uses BERT embeddings to measure semantic similarity between utterances:
-
-```python
-analyzer = LinguisticAlignment(alignment_type="bert")
-```
-
-Parameters:
-- `model_name`: BERT model to use (default: "bert-base-uncased")
-- `token`: Hugging Face token (optional)
-
-**Note:** To use BERT analysis, you'll need to set up a Hugging Face token. See the [Setting Up Hugging Face Token](#setting-up-hugging-face-token) section at the end of this README for detailed instructions.
-
-### 2. Semantic Alignment with FastText
-
-Uses FastText word embeddings to measure semantic similarity:
-
-```python
-analyzer = LinguisticAlignment(alignment_type="fasttext")
-```
-
-Parameters:
-- `model_name`: FastText model (default: "fasttext-wiki-news-300")
-- `high_sd_cutoff`: Standard deviation threshold for filtering high-frequency words
-- `low_n_cutoff`: Minimum frequency threshold for filtering rare words
-- `save_vocab`: Whether to save vocabulary lists to output directory
-
-**Note:** When you run FastText analysis for the first time, the package will automatically download the FastText model and embeddings from the official repository. This download (approximately 1-2 GB) may take several minutes depending on your internet connection. The files are cached for future use.
-
-### 3. Lexical and Syntactic Alignment
-
-Analyzes lexical and syntactic alignment using n-grams:
-
-```python
-analyzer = LinguisticAlignment(alignment_type="lexsyn")
-```
-
-Parameters:
-- `max_ngram`: Maximum n-gram size (default: 2)
-- `ignore_duplicates`: Whether to ignore duplicate lexical n-grams when computing syntactic alignment (to address "lexical boost" effect)
-- `add_stanford_tags`: Whether to include Stanford POS tags (default: False)
-
-### 4. Multiple Analysis Types
-
-Combine multiple analysis types in one run:
-
-```python
-analyzer = LinguisticAlignment(alignment_types=["bert", "fasttext", "lexsyn"])
-```
-
-## Lag Parameter
-
-The `lag` parameter determines how many turns to skip when pairing utterances. For example:
-
-- `lag=1` (default): Each utterance is paired with the immediately following utterance
-- `lag=2`: Each utterance is paired with the utterance that appears two positions later
-- `lag=3`: Each utterance is paired with the utterance three positions later
-
-This allows analysis of alignment patterns at different conversational distances.
-
-## Surrogate Analysis
-
-### How Surrogate Generation Works
-
-The surrogate generation process:
-1. Takes participants from two different conversations
-2. Pairs them together to create a new "artificial" conversation
-3. Calculates alignment metrics for these artificial pairs
-4. Uses these measurements as a baseline for chance-level alignment
-
-For this to work properly, the surrogate generator needs to understand your filename structure to identify:
-- Which participants belong to which conversation
-- Which condition each conversation belongs to (as surrogates are only created within the same experimental condition)
-
-### Configuring Surrogate Parameters for Your Dataset
-
-The surrogate generation requires specific parameters that must match your filename structure. These parameters tell the algorithm how to extract participant/dyad IDs and condition information from your filenames.
-
-```python
-surrogate_params = {
-    "id_separator": "_",  # Character separating parts of filename
-    "dyad_label": "ASU-",  # Text prefix identifying participant/dyad IDs
-    "condition_label": "ExpBlock",  # Text prefix identifying experimental conditions
-    "all_surrogates": False,  # Whether to generate all possible pairs or a subset
-    "keep_original_turn_order": True  # Whether to maintain original sequential turn order
+```bibtex
+@article{duran2019align,
+  title={ALIGN: Analyzing Linguistic Interactions with Generalizable techNiques—A Python Library},
+  author={Duran, Nicholas D and Paxton, Alexandra and Fusaroli, Riccardo},
+  journal={Psychological Methods},
+  year={2019},
+  publisher={American Psychological Association},
+  doi={10.1037/met0000206}
 }
 ```
 
-#### Example Filename Formats and Corresponding Parameters
+**Note:** A paper describing ALIGN 2.0 enhancements is in preparation. Check this repository for updates.
 
-#### Example 1: Original Format
-Filenames with structure: `ASU-T104_ExpBlock2-TrunkSlide.txt`
+---
 
-Correct parameters:
+## 🐛 Troubleshooting
 
-```python
-surrogate_params = {
-    "id_separator": "_",
-    "dyad_label": "ASU-",
-    "condition_label": "ExpBlock",
-    "all_surrogates": False,
-    "keep_original_turn_order": True
-}
-```
-#### Example 2: Simple Time-Condition Format
-Filenames with structure: `time191-cond1.txt`, `time192-cond1.txt`, etc.
+### Common Issues
 
-Correct parameters:
+**Issue: "No module named 'align_test'"**
+- **Solution**: Ensure you installed in editable mode: `pip install -e .`
 
-```python
-surrogate_params = {
-    "id_separator": "-",
-    "dyad_label": "time",
-    "condition_label": "cond",
-    "all_surrogates": False,
-    "keep_original_turn_order": True
-}
-```
-### Additional Parameters Explained
+**Issue: "401 Client Error: Unauthorized" (BERT)**
+- **Solution**: Check your Hugging Face token configuration (see [setup section](#-setting-up-hugging-face-token))
 
-- **all_surrogates**:
-  - `True`: Generate every possible combination of surrogate pairs (may be very large for big datasets)
-  - `False`: Generate a smaller, representative subset of surrogate pairs
+**Issue: "FileNotFoundError: [Errno 2] No such file or directory"**
+- **Solution**: Verify file paths are correct and files exist
 
-- **keep_original_turn_order**:
-  - `True`: Maintain the sequential order of turns in the surrogate conversations (recommended)
-  - `False`: Randomly shuffle the turns of each participant
+**Issue: "ValueError: No valid conversation files found"**
+- **Solution**: Check that preprocessed files have required columns (`participant`, `content`, `token`, etc.)
 
-### Using Existing Surrogate Files
+**Issue: "KeyError: 'tagged_spacy_lemma'"**
+- **Solution**: Ensure preprocessing included `add_additional_tags=True` or specify correct `tagger` parameter
 
-You can also reuse existing surrogate files:
+**Issue: Slow BERT analysis**
+- **Solution**: BERT is compute-intensive. Consider:
+  - Using FastText for initial exploration
+  - Running on GPU-enabled machine
+  - Processing smaller batches
 
-```python
-baseline_results = analyzer.analyze_baseline(
-    input_files="path/to/conversation/files",
-    output_directory="path/to/results",
-    use_existing_surrogates="path/to/existing/surrogate/files"
-)
-```
+**Issue: Surrogate generation fails**
+- **Solution**: Verify `id_separator`, `dyad_label`, and `condition_label` match your filename structure exactly
 
-## Output Files
+### Getting Help
 
-ALIGN generates CSV files with detailed alignment metrics:
+1. Check the [tutorials](tutorials/) for complete working examples
+2. Review this README carefully
+3. Open an issue on [GitHub](https://github.com/your-username/llm-linguistic-alignment/issues)
+4. Include error messages, code snippets, and Python version
 
-1. **Semantic alignment** (BERT):
-   - `semantic_alignment_bert-base-uncased_lag1.csv`
+---
 
-2. **Semantic alignment** (FastText):
-   - `semantic_alignment_fasttext-wiki-news-300_lag1_sd3_n2.csv`
+## 🤝 Contributing
 
-3. **Lexical/syntactic alignment**:
-   - `lexsyn_alignment_ngram2_lag1_noDups_noStan.csv`
+We welcome contributions! This package is under active development. To contribute:
 
-4. **Merged results** (when using multiple analyzers):
-   - `merged_alignment_results_lag1.csv`
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-5. **Baseline files** (surrogate analysis):
-   - `baseline_alignment_bert-base-uncased_lag1.csv`
-   - `baseline_alignment_fasttext_lag1_sd3_n2.csv`
-   - `baseline_alignment_lexsyn_ngram2_lag1_noDups_noStan.csv`
+**Areas for contribution:**
+- Additional preprocessing options
+- New alignment metrics
+- Performance optimizations
+- Documentation improvements
+- Bug fixes
 
-## Setting Up Hugging Face Token
+---
 
-To use BERT for semantic alignment analysis, you'll need to set up a Hugging Face token. Here's how to do it:
+## 📄 License
 
-### Step 1: Create a Hugging Face Account
-1. Go to [Hugging Face](https://huggingface.co/) and sign up for an account if you don't have one
-2. Log in to your account
+MIT License - see [LICENSE](LICENSE) file for details.
 
-### Step 2: Create an Access Token
-1. Go to your [Hugging Face profile settings](https://huggingface.co/settings/tokens)
-2. Click on "New token"
-3. Give your token a name (e.g., "ALIGN_ACCESS")
-4. Select "read" access
-5. Click "Generate token"
-6. Copy the generated token
+Copyright (c) 2025 Nicholas D. Duran
 
-### Step 3: Make the Token Available to ALIGN
+---
 
-Choose one of these methods to provide your token:
+## 🙏 Acknowledgments
 
-#### Option A: Environment Variable (Recommended)
-Set an environment variable named `HUGGINGFACE_TOKEN`:
+ALIGN 2.0 builds upon the original ALIGN methodology developed by Nicholas D. Duran, Alexandra Paxton, and Riccardo Fusaroli (2019).
 
-```bash
-# On Linux/Mac
-export HUGGINGFACE_TOKEN="your_token_here"
+The package leverages several excellent open-source projects:
+- [Hugging Face Transformers](https://huggingface.co/transformers/) for BERT models
+- [Gensim](https://radimrehurek.com/gensim/) for FastText embeddings
+- [NLTK](https://www.nltk.org/) for NLP utilities
+- [spaCy](https://spacy.io/) for linguistic processing
+- [Stanford CoreNLP](https://stanfordnlp.github.io/CoreNLP/) for POS tagging
 
-# On Windows (Command Prompt)
-set HUGGINGFACE_TOKEN=your_token_here
+---
 
-# On Windows (PowerShell)
-$env:HUGGINGFACE_TOKEN="your_token_here"
-```
+## 📞 Contact
 
-#### Option B: Config File
-Create a config file at `~/.config/my_package/config.json`:
+For questions about ALIGN 2.0:
+- **GitHub Issues**: [Open an issue](https://github.com/your-username/llm-linguistic-alignment/issues)
+- **Email**: nicholas.duran@utexas.edu
 
-```bash
-# Create directory if it doesn't exist
-mkdir -p ~/.config/my_package
-```
+For questions about the original ALIGN methodology, please refer to the [2019 paper](https://dynamicog.org/publications/journal/25-Duran2019.pdf).
 
-Then create the file with this content:
-```json
-{
-    "huggingface_token": "your_token_here"
-}
-```
+---
 
-#### Option C: Provide in Code
-Pass the token directly when initializing the analyzer:
-
-```python
-analyzer = LinguisticAlignment(
-    alignment_type="bert",
-    token="your_token_here"
-)
-```
-
-### Step 4: Test Your Setup
-
-Run the basic example to verify your token is working:
-
-```python
-import sys
-import os
-
-# Add src directory to path (if not installed)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-sys.path.append(os.path.join(project_root, "src"))
-
-from align_test.alignment import LinguisticAlignment
-
-# Initialize with token (if not provided via environment variable or config file)
-analyzer = LinguisticAlignment(
-    alignment_type="bert",
-    # token="your_token_here"  # Uncomment if using Option C
-)
-
-# Use included sample data
-data_path = os.path.join(project_root, "src", "align_test", "data", "prepped_stan_small")
-output_folder = "output"
-os.makedirs(output_folder, exist_ok=True)
-
-# Run a test analysis
-try:
-    print("Testing BERT analyzer...")
-    results = analyzer.analyze_folder(
-        folder_path=data_path,
-        output_directory=output_folder,
-        lag=1
-    )
-    print("Success! BERT analyzer is working.")
-except Exception as e:
-    print(f"Error: {str(e)}")
-    print("Please check your Hugging Face token and try again.")
-```
-
-If you encounter the error "401 Client Error: Unauthorized for url...", it means your token is invalid or not properly configured.
-
-## License
-
-MIT License
-
-Copyright (c) 2023
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+**Ready to start?** Head to the [Quick Start](#-quick-start) section or jump directly to the [Phase 1 tutorial](tutorials/test_comprehensive_prepare.ipynb)!
