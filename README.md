@@ -20,11 +20,14 @@ The package now includes enhanced preprocessing capabilities, support for multip
 
 **New to ALIGN?** The fastest way to get started is through our comprehensive Jupyter notebook tutorials:
 
-1. **[Phase 1 Tutorial: Preprocessing](tutorials/test_comprehensive_prepare.ipynb)**  
+1. **[Tutorial 1: Preprocessing](https://github.com/nickduran/align2-linguistic-alignment/blob/main/tutorials/tutorial_1_preprocessing.ipynb)**  
    Learn how to transform raw conversational transcripts into analysis-ready format
 
-2. **[Phase 2 Tutorial: Alignment Analysis](tutorials/test_comprehensive_alignment.ipynb)**  
+2. **[Tutorial 2: Alignment Analysis](https://github.com/nickduran/align2-linguistic-alignment/blob/main/tutorials/tutorial_2_alignment.ipynb)**  
    Discover how to measure linguistic alignment at multiple levels
+
+3. **[Tutorial 3: Baseline/Surrogate Analysis](https://github.com/nickduran/align2-linguistic-alignment/blob/main/tutorials/tutorial_3_baseline.ipynb)**  
+   Generate surrogate conversation pairs to establish chance-level baseline alignment for statistical comparison with real conversations
 
 These tutorials provide hands-on, step-by-step guidance using real conversational data and are the recommended starting point for all users.
 
