@@ -8,3 +8,4 @@ nltk>=3.6.5
 tqdm>=4.62.3
 python-dotenv>=0.19.2
 spacy>=3.0.0
+matplotlib>=3.5.0
