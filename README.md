@@ -201,8 +201,7 @@ results = analyzer.analyze_folder(
     # Lexical/syntactic parameters
     max_ngram=3,
     ignore_duplicates=True,
-    add_additional_tags=True,              # Use additional POS tags if available
-    additional_tagger_type="spacy"         # Which additional tagger: 'spacy' or 'stanford'
+    add_additional_tags=True             # Use additional POS tags if available
 )
 ```
 
