@@ -604,15 +604,17 @@ If you see "401 Client Error: Unauthorized", double-check your token configurati
 from align_test.alignment import LinguisticAlignment
 
 # Simplest possible analysis
+# Note: Requires HUGGINGFACE_TOKEN environment variable for BERT
 analyzer = LinguisticAlignment(alignment_type="bert")
 
 results = analyzer.analyze_folder(
-    folder_path="preprocessed_conversations/",
+    folder_path="preprocessed_conversations/",  # Already preprocessed files
     output_directory="results/",
-    lag=1
+    lag=1  # Pair each utterance with the next one
 )
 
 print(f"Analyzed {len(results)} conversation files")
+# Output: results/semantic_alignment_bert-base-uncased_lag1.csv
 ```
 
 ---
@@ -625,43 +627,52 @@ from align_test.alignment import LinguisticAlignment
 # Initialize with all analysis types
 analyzer = LinguisticAlignment(
     alignment_types=["bert", "fasttext", "lexsyn"],
-    cache_dir="cache/"  # Store models here
+    cache_dir="cache/"  # Store downloaded models here
 )
+
+# Configure parameters (can reuse for both real and baseline)
+common_params = {
+    "lag": 1
+}
+
+fasttext_params = {
+    "high_sd_cutoff": 3,    # Filter high-frequency words
+    "low_n_cutoff": 2,      # Filter rare words
+    "save_vocab": True      # Save vocabulary to output
+}
+
+lexsyn_params = {
+    "max_ngram": 3,            # Analyze up to 3-word phrases
+    "ignore_duplicates": True,  # Remove lexical overlap from syntax
+    "add_additional_tags": True  # Use spaCy/Stanford tags (must exist in preprocessed files)
+}
 
 # Analyze real conversations
 real_results = analyzer.analyze_folder(
     folder_path="preprocessed_conversations/",
     output_directory="results/real/",
-    lag=1,
-    # FastText params
-    high_sd_cutoff=3,
-    low_n_cutoff=2,
-    save_vocab=True,
-    # Lexsyn params
-    max_ngram=3,
-    ignore_duplicates=True,
-    add_additional_tags=True,
-    additional_tagger_type='spacy'
+    **common_params,
+    **fasttext_params,
+    **lexsyn_params
 )
+
+# Configure surrogate generation
+surrogate_params = {
+    "id_separator": "_",           # e.g., "dyad5_condition1.txt"
+    "dyad_label": "dyad",          # Filename prefix for dyad ID
+    "condition_label": "condition", # Filename prefix for condition
+    "all_surrogates": False,       # Sample ~50% of possible pairs
+    "keep_original_turn_order": True  # Maintain temporal structure
+}
 
 # Generate baseline with surrogates
 baseline_results = analyzer.analyze_baseline(
     input_files="preprocessed_conversations/",
     output_directory="results/baseline/",
-    # Surrogate configuration
-    id_separator="_",
-    dyad_label="dyad",
-    condition_label="condition",
-    all_surrogates=False,
-    keep_original_turn_order=True,
-    # Same analysis params as real data
-    lag=1,
-    high_sd_cutoff=3,
-    low_n_cutoff=2,
-    max_ngram=3,
-    ignore_duplicates=True,
-    add_additional_tags=True,
-    additional_tagger_type='spacy'
+    **common_params,
+    **fasttext_params,
+    **lexsyn_params,
+    **surrogate_params
 )
 
 print("Analysis complete!")
@@ -679,19 +690,27 @@ from align_test.alignment import LinguisticAlignment
 analyzer = LinguisticAlignment(alignment_type="lexsyn")
 
 # Analyze at different conversational distances
+# Note: Each lag value requires a separate analysis run
 for lag_value in [1, 2, 3]:
-    print(f"Analyzing with lag={lag_value}...")
+    print(f"\nAnalyzing with lag={lag_value}...")
+    print(f"  - lag=1: consecutive turns")
+    print(f"  - lag=2: skip 1 turn between pairs")
+    print(f"  - lag=3: skip 2 turns between pairs")
     
     results = analyzer.analyze_folder(
         folder_path="preprocessed_conversations/",
         output_directory=f"results/lag{lag_value}/",
         lag=lag_value,
         max_ngram=2,
-        add_additional_tags=True,
-        additional_tagger_type='spacy'
+        ignore_duplicates=True,
+        add_additional_tags=True  # Use additional POS tags if available
     )
     
-    print(f"  → Saved to results/lag{lag_value}/")
+    print(f"  ✓ Results saved to: results/lag{lag_value}/")
+    print(f"    Files analyzed: {len(results)}")
+
+print("\n✓ All lag analyses complete!")
+print("Compare results across lag values to see how alignment changes with distance.")
 ```
 
 ---
@@ -702,20 +721,32 @@ for lag_value in [1, 2, 3]:
 from align_test.prepare_transcripts import prepare_transcripts
 from align_test.alignment import LinguisticAlignment
 
-# Step 1: Preprocess with spaCy tagging
-print("Preprocessing conversations...")
-prepare_transcripts(
+# ============================================================
+# PHASE 1: Preprocess raw transcripts
+# ============================================================
+print("PHASE 1: Preprocessing raw conversations...")
+print("  Input: Tab-separated files with 'participant' and 'content' columns")
+print("  Output: Preprocessed files with tokens, lemmas, and POS tags\n")
+
+preprocessed_results = prepare_transcripts(
     input_files="raw_transcripts/",
     output_file_directory="preprocessed/",
     run_spell_check=True,
     minwords=2,
-    add_additional_tags=True,
-    tagger_type='spacy',
+    add_additional_tags=True,  # Add spaCy POS tags
+    tagger_type='spacy',       # Use spaCy (fast and accurate)
     spacy_model='en_core_web_sm'
 )
 
-# Step 2: Analyze with multiple alignment types
-print("\nAnalyzing alignment...")
+print(f"✓ Preprocessed {len(preprocessed_results)} utterances")
+print(f"  Saved to: preprocessed/\n")
+
+# ============================================================
+# PHASE 2: Analyze alignment
+# ============================================================
+print("PHASE 2: Analyzing linguistic alignment...")
+print("  Analyzers: BERT (semantic) + Lexical/Syntactic\n")
+
 analyzer = LinguisticAlignment(alignment_types=["bert", "lexsyn"])
 
 results = analyzer.analyze_folder(
@@ -724,11 +755,14 @@ results = analyzer.analyze_folder(
     lag=1,
     max_ngram=3,
     ignore_duplicates=True,
-    add_additional_tags=True,
-    additional_tagger_type='spacy'
+    add_additional_tags=True  # Use spaCy columns from preprocessing phase
 )
 
-print(f"\n✓ Complete! Analyzed {len(results)} files")
+print(f"\n✓ Analysis Complete! Analyzed {len(results)} files\n")
+print("Output files:")
+print("  - results/bert/semantic_alignment_bert-base-uncased_lag1.csv")
+print("  - results/lexsyn/lexsyn_alignment_ngram3_lag1_noDups_withSpacy.csv")
+print("  - results/merged_alignment_results_lag1.csv")
 ```
 
 ---
